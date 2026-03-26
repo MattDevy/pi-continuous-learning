@@ -1,0 +1,103 @@
+/**
+ * Pure functions for instinct confidence scoring.
+ * No I/O - all functions take plain values and return plain values.
+ */
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const CLAMP_MIN = 0.1;
+const CLAMP_MAX = 0.9;
+
+// initialConfidence brackets
+const INITIAL_LOW = 0.3;
+const INITIAL_MED = 0.5;
+const INITIAL_HIGH = 0.7;
+const INITIAL_VERY_HIGH = 0.85;
+
+const OBS_BRACKET_LOW_MAX = 2;
+const OBS_BRACKET_MED_MAX = 5;
+const OBS_BRACKET_HIGH_MAX = 10;
+
+// adjustConfidence deltas
+const DELTA_CONFIRMED = 0.05;
+const DELTA_CONTRADICTED = -0.15;
+const DELTA_INACTIVE = 0;
+
+// applyPassiveDecay
+const DECAY_PER_WEEK = 0.02;
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type FeedbackOutcome = "confirmed" | "contradicted" | "inactive";
+
+export interface ConfidenceResult {
+  confidence: number;
+  flaggedForRemoval: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function clamp(value: number): number {
+  return Math.max(CLAMP_MIN, Math.min(CLAMP_MAX, value));
+}
+
+function toResult(raw: number): ConfidenceResult {
+  const flaggedForRemoval = raw < CLAMP_MIN;
+  return { confidence: clamp(raw), flaggedForRemoval };
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the initial confidence score for a newly discovered instinct
+ * based on how many observations support it.
+ */
+export function initialConfidence(observationCount: number): number {
+  if (observationCount <= OBS_BRACKET_LOW_MAX) return INITIAL_LOW;
+  if (observationCount <= OBS_BRACKET_MED_MAX) return INITIAL_MED;
+  if (observationCount <= OBS_BRACKET_HIGH_MAX) return INITIAL_HIGH;
+  return INITIAL_VERY_HIGH;
+}
+
+/**
+ * Adjusts confidence based on a feedback outcome from the observer loop.
+ * Returns the clamped confidence and a flag indicating if removal is warranted.
+ */
+export function adjustConfidence(
+  current: number,
+  outcome: FeedbackOutcome,
+): ConfidenceResult {
+  const deltas: Record<FeedbackOutcome, number> = {
+    confirmed: DELTA_CONFIRMED,
+    contradicted: DELTA_CONTRADICTED,
+    inactive: DELTA_INACTIVE,
+  };
+  const raw = current + deltas[outcome];
+  return toResult(raw);
+}
+
+/**
+ * Applies passive time-based decay of -0.02 per week since lastUpdated.
+ * Future lastUpdated values produce zero decay.
+ */
+export function applyPassiveDecay(
+  confidence: number,
+  lastUpdated: string,
+): ConfidenceResult {
+  const now = Date.now();
+  const updatedAt = new Date(lastUpdated).getTime();
+  const elapsedMs = Math.max(0, now - updatedAt);
+  const weeksElapsed = elapsedMs / MS_PER_WEEK;
+  const decay = weeksElapsed * DECAY_PER_WEEK;
+  const raw = confidence - decay;
+  return toResult(raw);
+}
