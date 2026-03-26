@@ -191,8 +191,8 @@
       ],
       "notes": "Pure functions with no I/O dependencies.",
       "startedAt": "2026-03-26T16:25:16.107Z",
-      "updatedAt": "2026-03-26T16:27:12.562Z",
-      "completedAt": "2026-03-26T16:27:12.562Z"
+      "updatedAt": "2026-03-26T16:27:45.685Z",
+      "completedAt": "2026-03-26T16:27:45.685Z"
     },
     {
       "id": "US-009",
@@ -207,11 +207,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 9,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-001"
       ],
-      "notes": "Pure function, no type dependencies beyond string. Moved before observer stories since they depend on it."
+      "notes": "Pure function, no type dependencies beyond string. Moved before observer stories since they depend on it.",
+      "startedAt": "2026-03-26T16:27:45.687Z",
+      "updatedAt": "2026-03-26T16:29:57.999Z",
+      "completedAt": "2026-03-26T16:29:57.998Z"
     },
     {
       "id": "US-010",

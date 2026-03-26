@@ -204,3 +204,23 @@ Corrective Plan: N/A
   - US-021 (Instinct Loading and Filtering) directly depends on US-008 - it uses `flagged_for_removal` field populated by these functions
   - Decay math: need at least `(startConfidence - 0.1) / 0.02 * 7` days to hit the floor; for 0.5 start that's 140 days
 ---
+
+## 2026-03-26T16:29 - US-009
+Session: iter-ab4048d9
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/scrubber.ts` with `scrubSecrets(text): string` pure function
+- Covers 9 regex patterns: authorization headers, standalone bearer, x-api-key/x-auth-token headers, api_key/access_key/secret_key fields, token fields, password/passwd/pwd, secret/credential/private_key, AWS AKIA keys, OpenAI/Anthropic sk- keys
+- All patterns use `lastIndex = 0` reset before each `replace()` call (required for global regex reuse)
+- `REDACTED = "[REDACTED]"` exported as named constant for downstream use
+- 31 unit tests in `src/scrubber.test.ts`: authorization headers, HTTP headers, API key formats, token fields, password fields, credential fields, AWS keys, sk- keys, multi-secret strings, no-false-positive tests
+- All 118 tests pass, lint clean, typecheck clean
+- Files changed: src/scrubber.ts, src/scrubber.test.ts
+- **Learnings for future iterations:**
+  - Bearer token pattern must use `\S+` (not character class) to match values like `sk-abc...` that contain hyphens
+  - Sequential pattern application can consume partial tokens leaving orphan suffixes - verify test edge cases where multiple patterns could match overlapping text
+  - `pattern.lastIndex = 0` is required before each `replace()` when reusing global RegExp objects across calls
+  - `scrubSecrets` is imported by US-013 (tool call observer) and US-014 (user prompt observer) - applied to input/output fields before writing
+---
