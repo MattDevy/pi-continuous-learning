@@ -180,3 +180,27 @@ Corrective Plan: N/A
   - Use `readdirSync(dir).filter(f => f.endsWith('.md'))` to enumerate instinct files
   - `existsSync(dir)` guard in `listInstincts` allows callers to call before storage layout is initialized
 ---
+
+## 2026-03-26T16:27 - US-008
+Session: iter-6fe3768b
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/confidence.ts` with 3 pure confidence scoring functions
+- `initialConfidence(observationCount)`: bracket lookup returning 0.3/0.5/0.7/0.85
+- `adjustConfidence(current, outcome)`: applies +0.05/−0.15/0 delta, clamps to [0.1, 0.9], flags if raw < 0.1
+- `applyPassiveDecay(confidence, lastUpdated)`: −0.02/week based on elapsed ms, clamps, flags if raw < 0.1
+- `ConfidenceResult` interface: `{ confidence: number; flaggedForRemoval: boolean }` for functions that can trigger removal
+- `FeedbackOutcome` type: 'confirmed' | 'contradicted' | 'inactive'
+- All constants named (CLAMP_MIN, CLAMP_MAX, DELTA_CONFIRMED, DECAY_PER_WEEK, etc.) - no hardcoded values
+- 22 unit tests cover all brackets, outcomes, decay over time, boundary clamping, flagging
+- Fixed 2 test bugs discovered during RED phase: (1) clamping test expected no-flag when raw=0.05 (should flag); (2) 100-day decay test was insufficient to hit floor (200 days needed for 0.5 start)
+- All 87 tests pass, lint clean, typecheck clean
+- Files changed: src/confidence.ts, src/confidence.test.ts
+- **Learnings for future iterations:**
+  - `toResult(raw)` helper pattern: check `raw < CLAMP_MIN` before clamping to determine flag - checking after clamping would always be false
+  - `FeedbackOutcome` type exported from confidence.ts; downstream modules (US-031) will import it
+  - US-021 (Instinct Loading and Filtering) directly depends on US-008 - it uses `flagged_for_removal` field populated by these functions
+  - Decay math: need at least `(startConfidence - 0.1) / 0.02 * 7` days to hit the floor; for 0.5 start that's 140 days
+---

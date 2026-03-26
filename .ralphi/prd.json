@@ -168,8 +168,8 @@
       ],
       "notes": "",
       "startedAt": "2026-03-26T16:23:03.168Z",
-      "updatedAt": "2026-03-26T16:24:46.244Z",
-      "completedAt": "2026-03-26T16:24:46.243Z"
+      "updatedAt": "2026-03-26T16:25:16.105Z",
+      "completedAt": "2026-03-26T16:25:16.105Z"
     },
     {
       "id": "US-008",
@@ -185,11 +185,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 8,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-002"
       ],
-      "notes": "Pure functions with no I/O dependencies."
+      "notes": "Pure functions with no I/O dependencies.",
+      "startedAt": "2026-03-26T16:25:16.107Z",
+      "updatedAt": "2026-03-26T16:27:12.562Z",
+      "completedAt": "2026-03-26T16:27:12.562Z"
     },
     {
       "id": "US-009",
