@@ -656,8 +656,8 @@
       ],
       "notes": "",
       "startedAt": "2026-03-26T17:21:21.157Z",
-      "updatedAt": "2026-03-26T17:25:30.000Z",
-      "completedAt": "2026-03-26T17:25:30.000Z"
+      "updatedAt": "2026-03-26T17:26:32.890Z",
+      "completedAt": "2026-03-26T17:26:32.890Z"
     },
     {
       "id": "US-029",
@@ -672,12 +672,15 @@
         "Lint and typecheck pass"
       ],
       "priority": 29,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-005",
         "US-007"
       ],
-      "notes": ""
+      "notes": "",
+      "startedAt": "2026-03-26T17:26:32.892Z",
+      "updatedAt": "2026-03-26T17:29:03.757Z",
+      "completedAt": "2026-03-26T17:29:03.757Z"
     },
     {
       "id": "US-030",
@@ -691,11 +694,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 30,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-020"
       ],
-      "notes": ""
+      "notes": "All AC implemented in analyzer-timer.ts as part of US-020. isWithinActiveHours, getLastObservationTime, and getSkipReason cover both guardian conditions with configurable thresholds.",
+      "startedAt": "2026-03-26T17:29:03.760Z",
+      "updatedAt": "2026-03-26T17:30:30.000Z",
+      "completedAt": "2026-03-26T17:30:30.000Z"
     },
     {
       "id": "US-031",

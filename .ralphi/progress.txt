@@ -671,3 +671,45 @@ Corrective Plan: N/A
   - Suggestion type discriminated union with `type: "merge" | "command" | "promotion"` makes `filter + type predicate` pattern clean for section rendering
   - `findPromotionCandidates` takes only project instincts - not all instincts - to avoid suggesting global->global promotions
 ---
+
+## 2026-03-26T17:28 - US-029
+Session: iter-184ee0f2
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/instinct-projects.ts` with the /instinct-projects command
+- `readProjectsRegistry(baseDir?)`: reads projects.json, returns empty record on missing/invalid file
+- `countProjectInstincts(projectId, baseDir?)`: counts .md files in projects/<id>/instincts/personal/; returns 0 for missing directory
+- `formatDate(isoDate)`: formats ISO date as local date string; falls back to raw string on parse failure
+- `formatProjectsOutput(registry, baseDir?)`: sorts projects by last_seen descending, formats each with name, ID, instinct count, last seen; includes project total count with singular/plural
+- `handleInstinctProjects(_args, ctx, baseDir?)`: orchestrates load → format → notify; exported with `COMMAND_NAME = "instinct-projects"` for US-032 wiring
+- 18 unit tests in `src/instinct-projects.test.ts`: COMMAND_NAME (1), readProjectsRegistry (3), countProjectInstincts (4), formatDate (2), formatProjectsOutput (6), handleInstinctProjects (2)
+- All 484 tests pass (28 test files), lint clean, typecheck clean, build clean
+- Files changed: src/instinct-projects.ts, src/instinct-projects.test.ts
+- **Learnings for future iterations:**
+  - `join` from `node:path` is not needed when storage helper functions handle all path construction - avoid importing unused path utilities
+  - `vi` must be explicitly imported from vitest even when used in helper functions like `vi.fn()` - missing import causes `no-undef` lint error
+  - `countProjectInstincts` only counts `personal/` not `inherited/` - matches the PRD requirement exactly
+  - `formatDate` uses `toLocaleDateString()` which returns "Invalid Date" for invalid inputs (not an exception), so the try/catch fallback handles parsing errors gracefully
+  - `COMMAND_NAME` exported for US-032 to wire `pi.registerCommand(COMMAND_NAME, { handler: handleInstinctProjects, ... })`
+---
+## 2026-03-26T17:30 - US-030
+Session: iter-669df97b
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- US-030 (Session Guardian) was fully implemented as part of US-020 (Analyzer Timer Management)
+- `isWithinActiveHours(startHour, endHour)` in `src/analyzer-timer.ts`: returns true when `currentHour >= start && currentHour < end` using local time; handles default 8-23 range
+- `getLastObservationTime(projectId, baseDir?)`: reads last JSONL line, parses `timestamp` field to epoch ms; returns null for missing/empty/malformed file
+- `getSkipReason(config, projectId, baseDir?)`: checks `outside_active_hours` (via `isWithinActiveHours`) and `user_idle` (via `idleMs > config.max_idle_seconds * 1000`) in priority order
+- `Config` has `active_hours_start: 8`, `active_hours_end: 23`, `max_idle_seconds: 1800` as configurable defaults
+- 27 tests in `analyzer-timer.test.ts` cover all guardian conditions: `outside_active_hours` (before start), `user_idle` (31 min old observation), non-skip (10 min), 5 `isWithinActiveHours` boundary tests
+- All 484 tests pass, lint clean, typecheck clean
+- No new files needed - all US-030 AC already satisfied by existing implementation
+- **Learnings for future iterations:**
+  - When a story's implementation is fully subsumed by a dependency story, verify all AC before marking done - no new code may be needed
+  - `isWithinActiveHours` uses `getHours()` (local time) not UTC - matches user's timezone for active hours concept
+  - `active_hours_end: 23` means active until 22:59 (exclusive); `end: 24` would be "always active" since `getHours()` returns 0-23
+---
