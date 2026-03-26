@@ -15,6 +15,26 @@
 - **Run checks directly**: `node_modules/.bin/vitest run`, `node_modules/.bin/eslint src/`, `node_modules/.bin/tsc --noEmit` for raw output (pi output filter wraps npm scripts)
 ---
 
+## 2026-03-26T16:33 - US-011
+Session: iter-3701d32b
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/active-instincts.ts` - shared state module for active instinct ID tracking
+- `getCurrentActiveInstincts()`: returns copy of current active instinct ID array (immutable return)
+- `setCurrentActiveInstincts(ids)`: replaces state with copy of input array (immutable set)
+- `clearActiveInstincts()`: resets state to empty array
+- 6 unit tests in `src/active-instincts.test.ts`: default state, set/get, replace, clear, mutation isolation, empty set
+- All 136 tests pass, lint clean, typecheck clean
+- Files changed: src/active-instincts.ts, src/active-instincts.test.ts
+- **Learnings for future iterations:**
+  - Returns a copy (`[...activeInstincts]`) to enforce immutability - callers cannot mutate internal state
+  - `clearActiveInstincts()` used by US-023 on `agent_end` to reset between prompts
+  - `getCurrentActiveInstincts()` used by US-013/014 observers to populate `active_instincts` observation field
+  - `beforeEach(() => clearActiveInstincts())` essential in tests - module state persists across test cases
+---
+
 ## PRD Run Context
 PRD Branch: ralph/continuous-learning
 Started: 2026-03-26T14:00:28.554Z
