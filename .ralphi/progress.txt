@@ -645,3 +645,29 @@ Corrective Plan: N/A
   - `mkdirSync({ recursive: true })` for target dirs before writing - import may run before `ensureStorageLayout` in fresh contexts
   - `partitionByDuplicates` checks the INHERITED dirs (not personal) since that's where imports land - personal instincts created by the analyzer don't conflict
 ---
+
+## 2026-03-26T17:25 - US-028
+Session: iter-423081f0
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/instinct-evolve.ts` with the /instinct-evolve command
+- `tokenizeTrigger(trigger)`: lowercase, strip punctuation, filter stop words, require length >= 3; returns `Set<string>`
+- `triggerSimilarity(a, b)`: Jaccard similarity (intersection/union) of trigger token sets; returns 0 when both empty
+- `findMergeCandidates(instincts)`: groups by domain, finds pairs above `MERGE_SIMILARITY_THRESHOLD=0.3`, clusters connected pairs via BFS into connected components
+- `findCommandCandidates(instincts)`: flags instincts with domain="workflow" or trigger containing any keyword in `COMMAND_TRIGGER_KEYWORDS` (always, whenever, every time, before, after, run, execute)
+- `findPromotionCandidates(instincts, globalIds)`: pure filter - project scope, confidence >= `PROMOTION_CONFIDENCE_THRESHOLD=0.7`, not already in globalIds set
+- `generateEvolveSuggestions(projectInstincts, globalInstincts)`: combines all three; passes only projectInstincts to promotion candidates
+- `formatEvolveSuggestions(suggestions)`: sections for Merge/Command/Promotion; no-suggestion fallback message; total count with singular/plural
+- `loadInstinctsForEvolve(projectId?, baseDir?)`: loads all instincts (no confidence filter) for improvement discovery
+- `handleInstinctEvolve(args, ctx, projectId?, baseDir?)`: async command handler calling `ctx.ui.notify`
+- 41 unit tests in `src/instinct-evolve.test.ts`; 466 total tests pass; lint and typecheck clean
+- Files changed: src/instinct-evolve.ts, src/instinct-evolve.test.ts
+- **Learnings for future iterations:**
+  - BFS connected-component clustering is cleaner than union-find for small graphs; adjacency map + visited set pattern
+  - `await import(...)` is only valid inside `async` functions - use top-level `import` for static imports in test files
+  - `idCounter` pattern (module-level counter) in tests produces unique IDs when `makeInstinct` is called many times in a single test file; reset is not needed since it just needs uniqueness not predictability
+  - Suggestion type discriminated union with `type: "merge" | "command" | "promotion"` makes `filter + type predicate` pattern clean for section rendering
+  - `findPromotionCandidates` takes only project instincts - not all instincts - to avoid suggesting global->global promotions
+---
