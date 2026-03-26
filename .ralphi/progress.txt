@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- **Observation JSONL**: `appendObservation(obs, projectId, baseDir?)` in `src/observations.ts`; `appendFileSync` for atomic line appends; archival uses `renameSync` (atomic move); `cleanOldArchives(projectId, baseDir?)` uses `utimesSync`-testable `statSync().mtimeMs` for age check; archive filenames use ISO timestamp with `:` and `.` replaced by `-`
+- **Archive cleanup API**: `cleanOldArchives` is designed to be called once per `session_start` (US-032 wiring); uses `statSync().mtimeMs` for age comparison against `Date.now()`; safe to call on empty or missing dirs
 - **Storage layout**: `ensureStorageLayout(project, baseDir?)` in `src/storage.ts`; accepts optional `baseDir` for testability (defaults to `~/.pi/continuous-learning/`); path helpers all accept optional `baseDir` param; `mkdirSync({ recursive: true })` handles idempotency for directories; `existsSync` guard before `writeFileSync` for project.json (only-once write)
 - **Registry pattern**: `projects.json` is a `Record<string, ProjectEntry>` keyed by project ID; read with `JSON.parse(readFileSync(...))`, update with spread `{ ...existing, [id]: entry }`, write back atomically
 - **testable path functions**: Export helpers like `getProjectDir(id, baseDir?)` with optional baseDir; in tests pass a real `mkdtempSync` temp dir - no fs mocking needed; use `afterAll` with `rmSync(dir, { recursive: true, force: true })` for cleanup
@@ -33,6 +35,27 @@ Corrective Plan: N/A
   - `clearActiveInstincts()` used by US-023 on `agent_end` to reset between prompts
   - `getCurrentActiveInstincts()` used by US-013/014 observers to populate `active_instincts` observation field
   - `beforeEach(() => clearActiveInstincts())` essential in tests - module state persists across test cases
+---
+
+## 2026-03-26T16:35 - US-012
+Session: iter-141d8d4a
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/observations.ts` with `appendObservation` and `cleanOldArchives`
+- `appendObservation(obs, projectId, baseDir?)`: checks file size via `statSync`, archives at >= 10MB with `renameSync`, then `appendFileSync` new line
+- `cleanOldArchives(projectId, baseDir?)`: reads archive dir, checks `mtimeMs` of each `.jsonl` file, `unlinkSync` files >= 30 days old
+- Archive filename: ISO timestamp with `:` and `.` replaced by `-` to be filesystem-safe
+- `MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024` and `MAX_ARCHIVE_AGE_MS = 30 * 24 * 60 * 60 * 1000` as named constants (no hardcoding)
+- 9 unit tests using real `mkdtempSync` temp dirs; `utimesSync` used to simulate old/new file mtime for archive age tests
+- All 145 tests pass, lint clean, typecheck clean
+- Files changed: src/observations.ts, src/observations.test.ts
+- **Learnings for future iterations:**
+  - `utimesSync(path, atime, mtime)` sets file access/modification times - use for testing time-based logic without mocking `Date.now()`
+  - `renameSync` for archival is atomic on same filesystem (both paths under same temp dir in tests)
+  - `cleanOldArchives` must be called from `session_start` handler in US-032 wiring
+  - `appendObservation` is the primary entry point for US-013 and US-014 (tool call and user prompt observers)
 ---
 
 ## PRD Run Context

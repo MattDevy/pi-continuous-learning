@@ -256,8 +256,8 @@
       ],
       "notes": "Simple shared state module. Split from US-013 and US-023 to break circular dependency between observer and injector.",
       "startedAt": "2026-03-26T16:32:17.958Z",
-      "updatedAt": "2026-03-26T16:33:20.000Z",
-      "completedAt": "2026-03-26T16:33:20.000Z"
+      "updatedAt": "2026-03-26T16:33:36.809Z",
+      "completedAt": "2026-03-26T16:33:36.809Z"
     },
     {
       "id": "US-012",
@@ -271,12 +271,15 @@
         "Lint and typecheck pass"
       ],
       "priority": 12,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-002",
         "US-005"
       ],
-      "notes": ""
+      "notes": "",
+      "startedAt": "2026-03-26T16:33:36.811Z",
+      "updatedAt": "2026-03-26T16:35:00.000Z",
+      "completedAt": "2026-03-26T16:35:00.000Z"
     },
     {
       "id": "US-013",
