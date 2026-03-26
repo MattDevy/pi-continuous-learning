@@ -62,14 +62,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 3,
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [
         "US-002"
       ],
       "notes": "",
       "startedAt": "2026-03-26T14:06:55.915Z",
-      "updatedAt": "2026-03-26T14:06:55.915Z",
-      "completedAt": null
+      "updatedAt": "2026-03-26T14:08:45.000Z",
+      "completedAt": "2026-03-26T14:08:45.000Z"
     },
     {
       "id": "US-004",

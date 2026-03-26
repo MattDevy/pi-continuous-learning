@@ -1,4 +1,8 @@
 ## Codebase Patterns
+- **Config module**: `loadConfig()` in `src/config.ts`; imports `Config` type from `./types.js`; uses TypeBox `Type.Partial(Type.Object(...))` + `Value.Clean()` for runtime validation of partial overrides; `DEFAULT_CONFIG` and `CONFIG_PATH` are named exports
+- **ESLint Node globals**: `eslint.config.js` imports `globals` from the `globals` package and spreads `globals.node` into `languageOptions.globals` to allow `console`, `Buffer`, `process`, etc.
+- **fs mock pattern**: In vitest, `vi.mock("node:fs")` + `vi.mocked(fs).existsSync.mockReturnValue(...)` + cast mock return as `unknown as ReturnType<typeof fs.readFileSync>` to satisfy TypeScript
+
 - **Pi Extension structure**: Default export `function(_pi: ExtensionAPI): void` in `src/index.ts`; pi-package requires `keywords: ["pi-package"]` and `pi.extensions` in package.json
 - **Module resolution**: `"module": "NodeNext"` + `"moduleResolution": "NodeNext"` in tsconfig; use `.js` extension in relative imports (e.g., `import from "./index.js"`)
 - **Peer deps available**: All `@mariozechner/*` packages (pi-coding-agent, pi-ai, pi-tui) and `@sinclair/typebox` are installed as peer deps via npm auto-install
@@ -57,4 +61,25 @@ Corrective Plan: N/A
   - `flagged_for_removal` is optional on Instinct - set by confidence decay logic (US-008/031)
   - Config includes `active_hours_start`, `active_hours_end`, `max_idle_seconds` for US-030 (session guardian)
   - Type-only tests use `import type` - no runtime values needed, vitest still runs them fine
+---
+
+## 2026-03-26T14:08 - US-003
+Session: iter-18ec9adf
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/config.ts` with `loadConfig()`, `DEFAULT_CONFIG`, and `CONFIG_PATH`
+- TypeBox `PartialConfigSchema` validates/cleans user config at runtime boundary (only known fields pass through)
+- Handles missing file (returns defaults), partial overrides (merge), invalid JSON (warn + return defaults)
+- Default values match spec: run_interval_minutes:5, min_observations_to_analyze:20, min_confidence:0.5, max_instincts:20, model:claude-haiku-4-5, timeout_seconds:120
+- Fixed eslint.config.js: added `globals.node` to languageOptions so console/Buffer/process are recognized
+- 6 unit tests in `src/config.test.ts` covering all 4 acceptance scenarios + spec defaults + CONFIG_PATH
+- All 18 tests pass, lint clean, typecheck clean
+- Files changed: src/config.ts, src/config.test.ts, eslint.config.js
+- **Learnings for future iterations:**
+  - TypeBox `Value.Clean()` strips unknown properties from a parsed object - use for safe config/JSON ingestion at runtime boundaries
+  - `vi.mock("node:fs")` mocks the entire fs module; call `vi.resetAllMocks()` in beforeEach to avoid test bleed
+  - `fs.readFileSync` overloads - cast mock return value as `unknown as ReturnType<typeof fs.readFileSync>` to avoid Buffer type errors
+  - `globals` package (already a transitive ESLint dep) provides Node.js/browser globals for flat config
 ---
