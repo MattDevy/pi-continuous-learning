@@ -379,8 +379,8 @@
       ],
       "notes": "",
       "startedAt": "2026-03-26T16:45:45.471Z",
-      "updatedAt": "2026-03-26T16:47:45.000Z",
-      "completedAt": "2026-03-26T16:47:45.000Z"
+      "updatedAt": "2026-03-26T16:48:10.528Z",
+      "completedAt": "2026-03-26T16:48:10.528Z"
     },
     {
       "id": "US-017",
@@ -395,11 +395,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 17,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-003"
       ],
-      "notes": ""
+      "notes": "",
+      "startedAt": "2026-03-26T16:48:10.532Z",
+      "updatedAt": "2026-03-26T16:49:48.062Z",
+      "completedAt": "2026-03-26T16:49:48.061Z"
     },
     {
       "id": "US-018",

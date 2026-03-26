@@ -374,3 +374,27 @@ Corrective Plan: N/A
   - String args check (`typeof event.args === "string"`) prevents double-JSON-stringify for string inputs
   - `lastObs()` helper pattern: returns non-undefined or throws, avoids strict-mode TS array access errors
 ---
+
+## 2026-03-26T16:49 - US-017
+Session: iter-6ea40f72
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/analyzer-spawn.ts` with `spawnAnalyzer()` and `buildAnalyzerArgs()` (exported separately for testability)
+- `buildAnalyzerArgs(systemPromptFile, userPrompt, model)`: constructs arg array with all required flags in spec order: --mode json, -p, --no-session, --tools read,write, --no-extensions, --no-skills, --no-prompt-templates, --no-themes, --model <model>, --append-system-prompt <file>, <userPrompt>
+- `spawnAnalyzer(systemPromptFile, userPrompt, cwd, model?)`: spawns "pi" with stdio ['ignore', 'pipe', 'pipe'], returns SpawnAnalyzerHandle with { process, completion }
+- `completion` is a Promise<number | null> that resolves when the child process emits 'close' - carries the exit code (null if killed via signal)
+- Model defaults to DEFAULT_CONFIG.model ("claude-haiku-4-5") - no hardcoding
+- `ANALYZER_FLAGS` const array (as const) holds all non-variable flags; spread into buildAnalyzerArgs
+- 23 unit tests in `src/analyzer-spawn.test.ts` using vi.mock("node:child_process") and a fake EventEmitter-based ChildProcess
+- Tests cover: all required flag presence, arg order, --model value, stdio tuple, cwd option, handle.process identity, completion promise resolution, null exit code, default/override model
+- All 234 tests pass, lint clean, typecheck clean
+- Files changed: src/analyzer-spawn.ts, src/analyzer-spawn.test.ts
+- **Learnings for future iterations:**
+  - `vi.mock("node:child_process")` then `await import(...)` pattern (dynamic import after mock registration) is required for top-level vi.mock to apply before module evaluation
+  - Fake ChildProcess: `EventEmitter` with typed extra fields cast via `as unknown as ChildProcess` - minimal surface area needed for tests
+  - `completion` promise listens to 'close' event (not 'exit') - 'close' fires after stdio streams close, which is the right signal for "process fully done"
+  - `buildAnalyzerArgs` is exported separately so US-018 and US-019 can reuse/test the arg construction independently
+  - `ANALYZER_FLAGS as const` ensures the spread produces a readonly tuple - prevents accidental mutation of the flag list
+---
