@@ -767,3 +767,29 @@ Corrective Plan: N/A
   - `mkdtempSync(join(tmpdir(), "pi-cl-"))` creates a unique temp dir per session for the system prompt file
   - No casts needed: Pi's `ToolExecutionStartEvent.args: any` is assignable to local `args: unknown`; Pi's `AgentEndEvent` (with extra `messages` field) is assignable to local (without `messages`)
 ---
+
+## 2026-03-26T17:50 - US-033
+Session: iter-737792d6
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/error-logger.ts` with `logError` and `logWarning` utilities
+- `logError(projectId, context, error, baseDir?)`: writes `[ISO timestamp] [context] Error: <msg>` to `projects/<id>/analyzer.log`; falls back to `console.warn` when projectId is null or when log I/O fails; never throws; includes stack trace for Error instances
+- `logWarning(projectId, context, message, baseDir?)`: writes `Warning:` entries; same fallback semantics as logError
+- `getLogPath(projectId, baseDir?)`: exported helper returning path to analyzer.log for testability
+- Updated `src/index.ts`: all 6 active event handlers (session_start, session_shutdown, before_agent_start, agent_end, tool_execution_start, tool_execution_end) now wrap body in try/catch + logError; agent_start is a no-op so no error path
+- Updated `src/tool-observer.ts`: `handleToolStart` and `handleToolEnd` each wrapped in try/catch; errors logged to analyzer.log via logError, never propagated
+- Updated `src/prompt-observer.ts`: `handleBeforeAgentStart` and `handleAgentEnd` each wrapped in try/catch; errors logged silently
+- Updated `src/analyzer-runner.ts`: added stderr collection via `handle.process.stderr?.on("data")` listener; logs stderr via `logWarning` on subprocess failure (result.success=false) or stream parse error; added try/catch around parseAnalyzerStream call - returns graceful result instead of throwing
+- Config loading errors already fell back to defaults with console.warn (US-003) - no changes needed
+- 12 unit tests in `src/error-logger.test.ts`: getLogPath path format (1), logError (8: timestamp/context in file, stack trace, dir creation, append semantics, non-Error string, null projectId fallback, write failure fallback, no-throw on undefined/null), logWarning (3: Warning prefix, null fallback, no-throw)
+- All 534 tests pass (30 test files), lint clean, typecheck clean, build clean
+- Files changed: src/error-logger.ts (new), src/error-logger.test.ts (new), src/index.ts, src/tool-observer.ts, src/prompt-observer.ts, src/analyzer-runner.ts
+- **Learnings for future iterations:**
+  - Error logger pattern: mkdirSync({ recursive: true }) on dirname(logPath) before appendFileSync - ensures dir exists even when project dir not yet created
+  - try/catch in logger itself uses empty catch block - the logger must never throw; fallback to console.warn is the safe floor
+  - Collecting subprocess stderr: `handle.process.stderr?.on("data", (chunk: Buffer) => stderrOutput += chunk.toString())` - accumulate during run, log only if non-empty on failure (avoids noise for successful runs)
+  - Catching parseAnalyzerStream errors in runAnalysis: return `{ skipped: false, result: { success: false, filesWritten: [], errors: [String(err)] } }` so callers see a clean result shape rather than a thrown exception
+  - `agent_start` no-op handler doesn't need try/catch since it has no body to fail
+  - This is the final story (US-033) - all 33 user stories are now complete
