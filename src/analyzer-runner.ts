@@ -11,6 +11,7 @@ import { setAnalyzerRunning } from "./observer-guard.js";
 import { spawnAnalyzer } from "./analyzer-spawn.js";
 import { parseAnalyzerStream } from "./analyzer-stream.js";
 import type { AnalysisResult } from "./analyzer-stream.js";
+import { runDecayPass } from "./instinct-decay.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -102,6 +103,10 @@ export interface RunAnalysisParams {
   cwd: string;
   timeoutSeconds?: number;
   model?: string;
+  /** Project ID for passive decay pass before analysis. Omit to skip project decay. */
+  projectId?: string | null;
+  /** Base storage directory override (for tests). */
+  baseDir?: string;
 }
 
 export type SkipReason = "in_progress" | "cooldown";
@@ -145,6 +150,11 @@ export async function runAnalysis(
     if (elapsed < ANALYSIS_COOLDOWN_MS) {
       return { skipped: true, skipReason: "cooldown" };
     }
+  }
+
+  // Apply passive confidence decay before analysis (US-031)
+  if (params.projectId !== undefined) {
+    runDecayPass(params.projectId, params.baseDir);
   }
 
   const timeoutMs =

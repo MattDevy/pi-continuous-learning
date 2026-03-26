@@ -24,6 +24,10 @@ vi.mock("./analyzer-stream.js", () => ({
   parseAnalyzerStream: vi.fn(),
 }));
 
+vi.mock("./instinct-decay.js", () => ({
+  runDecayPass: vi.fn(),
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -74,6 +78,7 @@ function makeHandle(process: ChildProcess) {
 let spawnAnalyzerMock: ReturnType<typeof vi.fn>;
 let parseStreamMock: ReturnType<typeof vi.fn>;
 let setAnalyzerRunningMock: ReturnType<typeof vi.fn>;
+let runDecayPassMock: ReturnType<typeof vi.fn>;
 
 beforeEach(async () => {
   vi.useFakeTimers();
@@ -85,6 +90,10 @@ beforeEach(async () => {
   spawnAnalyzerMock = vi.mocked(spawnModule.spawnAnalyzer);
   parseStreamMock = vi.mocked(streamModule.parseAnalyzerStream);
   setAnalyzerRunningMock = vi.mocked(guardModule.setAnalyzerRunning);
+
+  const decayModule = await import("./instinct-decay.js");
+  runDecayPassMock = vi.mocked(decayModule.runDecayPass);
+  runDecayPassMock.mockReturnValue(0);
 
   // Default: parse resolves immediately with a success result
   parseStreamMock.mockResolvedValue({
@@ -361,5 +370,52 @@ describe("isAnalysisRunning and getLastRunTime", () => {
     const lastRun = runner.getLastRunTime();
     expect(lastRun).not.toBeNull();
     expect(lastRun!).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe("runAnalysis - passive decay integration (US-031)", () => {
+  it("calls runDecayPass with projectId when projectId is provided", async () => {
+    const runner = await import("./analyzer-runner.js");
+    const proc = makeFakeProcess();
+    spawnAnalyzerMock.mockReturnValue(makeHandle(proc));
+
+    await runner.runAnalysis({
+      systemPromptFile: "/tmp/sys.md",
+      userPrompt: "analyze",
+      cwd: "/tmp",
+      projectId: "proj-abc123",
+      baseDir: "/tmp/base",
+    });
+
+    expect(runDecayPassMock).toHaveBeenCalledWith("proj-abc123", "/tmp/base");
+  });
+
+  it("calls runDecayPass with null projectId when null is provided", async () => {
+    const runner = await import("./analyzer-runner.js");
+    const proc = makeFakeProcess();
+    spawnAnalyzerMock.mockReturnValue(makeHandle(proc));
+
+    await runner.runAnalysis({
+      systemPromptFile: "/tmp/sys.md",
+      userPrompt: "analyze",
+      cwd: "/tmp",
+      projectId: null,
+    });
+
+    expect(runDecayPassMock).toHaveBeenCalledWith(null, undefined);
+  });
+
+  it("does not call runDecayPass when projectId is omitted", async () => {
+    const runner = await import("./analyzer-runner.js");
+    const proc = makeFakeProcess();
+    spawnAnalyzerMock.mockReturnValue(makeHandle(proc));
+
+    await runner.runAnalysis({
+      systemPromptFile: "/tmp/sys.md",
+      userPrompt: "analyze",
+      cwd: "/tmp",
+    });
+
+    expect(runDecayPassMock).not.toHaveBeenCalled();
   });
 });
