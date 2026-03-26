@@ -7,11 +7,16 @@ import {
   buildInjectionBlock,
   injectInstincts,
   handleBeforeAgentStartInjection,
+  handleAgentEndClearInstincts,
   INSTINCTS_HEADER,
 } from "./instinct-injector.js";
+import {
+  getCurrentActiveInstincts,
+  clearActiveInstincts,
+} from "./active-instincts.js";
 import type { Instinct, Config } from "./types.js";
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
-import type { BeforeAgentStartEvent } from "./prompt-observer.js";
+import type { BeforeAgentStartEvent, AgentEndEvent } from "./prompt-observer.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -127,8 +132,10 @@ describe("injectInstincts", () => {
 // ---------------------------------------------------------------------------
 
 describe("handleBeforeAgentStartInjection", () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(async () => {
+    clearActiveInstincts();
+    const { loadAndFilterFromConfig } = await import("./instinct-loader.js");
+    vi.mocked(loadAndFilterFromConfig).mockReturnValue([]);
   });
 
   it("returns undefined when no instincts qualify (empty loader result)", async () => {
@@ -187,5 +194,70 @@ describe("handleBeforeAgentStartInjection", () => {
     const result = injectInstincts(systemPrompt, instincts);
     expect(result?.indexOf("SYSTEM START")).toBe(0);
     expect(result?.indexOf(INSTINCTS_HEADER)).toBeGreaterThan(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Active Instincts State Bridge (US-023)
+// ---------------------------------------------------------------------------
+
+vi.mock("./instinct-loader.js", () => ({
+  loadAndFilterFromConfig: vi.fn(),
+}));
+
+describe("active instincts state bridge", () => {
+  const MOCK_EVENT: BeforeAgentStartEvent = {
+    type: "before_agent_start",
+    prompt: "do something",
+    systemPrompt: "You are helpful.",
+  };
+
+  const MOCK_AGENT_END: AgentEndEvent = {
+    type: "agent_end",
+  };
+
+  beforeEach(async () => {
+    clearActiveInstincts();
+    const { loadAndFilterFromConfig } = await import("./instinct-loader.js");
+    vi.mocked(loadAndFilterFromConfig).mockReset();
+  });
+
+  it("sets active instinct IDs after successful injection", async () => {
+    const { loadAndFilterFromConfig } = await import("./instinct-loader.js");
+    const instincts = [
+      makeInstinct({ id: "instinct-a", trigger: "t", action: "a" }),
+      makeInstinct({ id: "instinct-b", trigger: "t2", action: "a2" }),
+    ];
+    vi.mocked(loadAndFilterFromConfig).mockReturnValue(instincts);
+
+    handleBeforeAgentStartInjection(MOCK_EVENT, MOCK_CTX, BASE_CONFIG, "proj1");
+
+    expect(getCurrentActiveInstincts()).toEqual(["instinct-a", "instinct-b"]);
+  });
+
+  it("clears active instincts when no instincts qualify", async () => {
+    const { loadAndFilterFromConfig } = await import("./instinct-loader.js");
+    vi.mocked(loadAndFilterFromConfig).mockReturnValue([]);
+
+    // Pre-set some active instincts
+    const { setCurrentActiveInstincts } = await import("./active-instincts.js");
+    setCurrentActiveInstincts(["old-id"]);
+
+    handleBeforeAgentStartInjection(MOCK_EVENT, MOCK_CTX, BASE_CONFIG, "proj1");
+
+    expect(getCurrentActiveInstincts()).toEqual([]);
+  });
+
+  it("clears active instincts on agent_end", async () => {
+    const { setCurrentActiveInstincts } = await import("./active-instincts.js");
+    setCurrentActiveInstincts(["instinct-x", "instinct-y"]);
+
+    handleAgentEndClearInstincts(MOCK_AGENT_END, MOCK_CTX);
+
+    expect(getCurrentActiveInstincts()).toEqual([]);
+  });
+
+  it("active instincts are empty by default before any injection", () => {
+    expect(getCurrentActiveInstincts()).toEqual([]);
   });
 });

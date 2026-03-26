@@ -2,10 +2,11 @@
  * System prompt injection for pi-continuous-learning.
  * Loads filtered instincts and appends them to the system prompt on each
  * before_agent_start event so the agent benefits from learned behaviors.
+ * Also bridges injected instinct IDs to shared active-instincts state (US-023).
  */
 
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
-import type { BeforeAgentStartEvent } from "./prompt-observer.js";
+import type { BeforeAgentStartEvent, AgentEndEvent } from "./prompt-observer.js";
 import type { Config, Instinct } from "./types.js";
 
 /** Subset of BeforeAgentStartEventResult used by this module. */
@@ -14,6 +15,10 @@ export interface InjectionResult {
   systemPrompt?: string;
 }
 import { loadAndFilterFromConfig } from "./instinct-loader.js";
+import {
+  setCurrentActiveInstincts,
+  clearActiveInstincts,
+} from "./active-instincts.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -66,7 +71,8 @@ export function injectInstincts(
 
 /**
  * Handles before_agent_start events.
- * Loads qualifying instincts and appends them to the system prompt.
+ * Loads qualifying instincts, appends them to the system prompt, and stores
+ * their IDs in shared active-instincts state for observation tagging (US-023).
  * Returns undefined when no instincts qualify (no-op).
  */
 export function handleBeforeAgentStartInjection(
@@ -80,8 +86,25 @@ export function handleBeforeAgentStartInjection(
 
   const modified = injectInstincts(event.systemPrompt, instincts);
   if (modified === null) {
+    setCurrentActiveInstincts([]);
     return undefined;
   }
 
+  setCurrentActiveInstincts(instincts.map((i) => i.id));
   return { systemPrompt: modified };
+}
+
+// ---------------------------------------------------------------------------
+// handleAgentEndClearInstincts
+// ---------------------------------------------------------------------------
+
+/**
+ * Handles agent_end events.
+ * Clears active instincts state so the next prompt starts clean (US-023).
+ */
+export function handleAgentEndClearInstincts(
+  _event: AgentEndEvent,
+  _ctx: ExtensionContext
+): void {
+  clearActiveInstincts();
 }
