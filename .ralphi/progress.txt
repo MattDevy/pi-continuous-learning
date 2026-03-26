@@ -737,3 +737,33 @@ Corrective Plan: N/A
   - When adding `vi.mock(...)` to existing test file, add default mock return value in `beforeEach` to ensure stability across all describe blocks
   - `applyPassiveDecay` in confidence.ts uses `Date.now()` internally - tests use real old timestamps (daysAgo helper) rather than mocking time, which works cleanly
 ---
+
+## 2026-03-26T17:46 - US-032
+Session: iter-df5b2b0a
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Rewrote `src/index.ts` - full integration wiring of all modules
+- Default export `function(pi: ExtensionAPI): void` registers 7 event handlers and 6 slash commands
+- Closure-based session state (`config`, `project`, `systemPromptFile`) populated on `session_start`
+- `session_start`: calls `loadConfig()`, `detectProject(pi, ctx.cwd)`, `ensureStorageLayout()`, `cleanOldArchives()`, writes system prompt to temp file via `mkdtempSync`, starts analyzer timer with `onAnalyze` callback
+- `onAnalyze` callback: builds `getObservationsPath` + `getProjectInstinctsDir` paths, calls `buildAnalyzerUserPrompt`, runs `runAnalysis()`
+- `session_shutdown`: calls `stopAnalyzerTimer()` + `shutdownAnalyzer()`; appendFileSync is sync so no async flush needed
+- `before_agent_start`: calls `handleBeforeAgentStart` (observer) + returns `handleBeforeAgentStartInjection` result (injector)
+- `agent_start`: no-op handler (required by AC, no module implements it)
+- `agent_end`: calls `handleAgentEnd` (observer) + `handleAgentEndClearInstincts` (injector)
+- `tool_execution_start`: delegates to `handleToolStart`; `tool_execution_end`: delegates to `handleToolEnd`
+- Commands bound with closures over `project?.id` so they automatically use the current project
+- `writeSystemPromptFile()` helper: single-responsibility function under 50 lines
+- 19 unit tests in `src/index.test.ts`: verifies 7 event registrations, 6 command registrations, handler types, description strings, void return
+- 522 tests pass (29 test files), lint clean, typecheck clean
+- Files changed: src/index.ts, src/index.test.ts
+- **Learnings for future iterations:**
+  - Closure-based state (vs module-level state) is cleaner for extensions - each pi.on() factory call gets its own clean closure; no need for explicit reset functions
+  - Pi event type compatibility: Pi types are structural supertypes of local mirror types (extra fields like `images?`) - no casts needed; TypeScript structural subtyping handles this automatically
+  - `pi.on("before_agent_start", handler)` supports one handler returning `BeforeAgentStartEventResult | void` - combine observer and injector in one registered handler
+  - Capturing `ctx.cwd` in a const before async operations is required - the ctx reference may not be stable across async boundaries
+  - `mkdtempSync(join(tmpdir(), "pi-cl-"))` creates a unique temp dir per session for the system prompt file
+  - No casts needed: Pi's `ToolExecutionStartEvent.args: any` is assignable to local `args: unknown`; Pi's `AgentEndEvent` (with extra `messages` field) is assignable to local (without `messages`)
+---
