@@ -758,8 +758,8 @@
       ],
       "notes": "Integration wiring story - depends on all individual modules being complete.",
       "startedAt": "2026-03-26T17:40:00.592Z",
-      "updatedAt": "2026-03-26T17:46:00.000Z",
-      "completedAt": "2026-03-26T17:46:00.000Z"
+      "updatedAt": "2026-03-26T17:46:44.567Z",
+      "completedAt": "2026-03-26T17:46:44.567Z"
     },
     {
       "id": "US-033",
@@ -775,11 +775,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 33,
-      "status": "open",
+      "status": "in_progress",
       "dependsOn": [
         "US-032"
       ],
-      "notes": "Final hardening pass across all modules."
+      "notes": "Final hardening pass across all modules.",
+      "startedAt": "2026-03-26T17:46:44.570Z",
+      "updatedAt": "2026-03-26T17:46:44.570Z",
+      "completedAt": null
     }
   ]
 }

@@ -12,6 +12,7 @@ import { spawnAnalyzer } from "./analyzer-spawn.js";
 import { parseAnalyzerStream } from "./analyzer-stream.js";
 import type { AnalysisResult } from "./analyzer-stream.js";
 import { runDecayPass } from "./instinct-decay.js";
+import { logWarning, logError } from "./error-logger.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -172,6 +173,12 @@ export async function runAnalysis(
 
   _currentProcess = handle.process;
 
+  // Collect stderr for logging on failure
+  let stderrOutput = "";
+  handle.process.stderr?.on("data", (chunk: Buffer) => {
+    stderrOutput += chunk.toString();
+  });
+
   // Arm the timeout
   _timeoutHandle = setTimeout(() => {
     if (_currentProcess !== null) {
@@ -185,8 +192,29 @@ export async function runAnalysis(
       handle.process.stdout as import("node:stream").Readable
     );
 
+    if (!result.success && stderrOutput.trim()) {
+      logWarning(
+        params.projectId ?? null,
+        "analyzer-runner",
+        `Subprocess failed. stderr:\n${stderrOutput.trim()}`,
+        params.baseDir
+      );
+    }
+
     _lastRunTime = Date.now();
     return { skipped: false, result };
+  } catch (err) {
+    if (stderrOutput.trim()) {
+      logWarning(
+        params.projectId ?? null,
+        "analyzer-runner",
+        `Subprocess error. stderr:\n${stderrOutput.trim()}`,
+        params.baseDir
+      );
+    }
+    logError(params.projectId ?? null, "analyzer-runner:runAnalysis", err, params.baseDir);
+    _lastRunTime = Date.now();
+    return { skipped: false, result: { success: false, filesWritten: [], errors: [String(err)] } };
   } finally {
     clearRunState();
   }

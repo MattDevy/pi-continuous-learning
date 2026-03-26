@@ -25,6 +25,7 @@ import { getCurrentActiveInstincts } from "./active-instincts.js";
 import { appendObservation } from "./observations.js";
 import { shouldSkipObservation } from "./observer-guard.js";
 import { scrubSecrets } from "./scrubber.js";
+import { logError } from "./error-logger.js";
 import type { Observation, ProjectEntry } from "./types.js";
 
 export const MAX_TOOL_INPUT_LENGTH = 5000;
@@ -54,23 +55,27 @@ export function handleToolStart(
   project: ProjectEntry,
   baseDir?: string
 ): void {
-  if (shouldSkipObservation()) return;
+  try {
+    if (shouldSkipObservation()) return;
 
-  const raw = typeof event.args === "string" ? event.args : JSON.stringify(event.args);
-  const input = truncate(scrubSecrets(raw), MAX_TOOL_INPUT_LENGTH);
+    const raw = typeof event.args === "string" ? event.args : JSON.stringify(event.args);
+    const input = truncate(scrubSecrets(raw), MAX_TOOL_INPUT_LENGTH);
 
-  const observation: Observation = {
-    timestamp: new Date().toISOString(),
-    event: "tool_start",
-    session: getSessionId(ctx),
-    project_id: project.id,
-    project_name: project.name,
-    tool: event.toolName,
-    input,
-    ...buildActiveInstincts(),
-  };
+    const observation: Observation = {
+      timestamp: new Date().toISOString(),
+      event: "tool_start",
+      session: getSessionId(ctx),
+      project_id: project.id,
+      project_name: project.name,
+      tool: event.toolName,
+      input,
+      ...buildActiveInstincts(),
+    };
 
-  appendObservation(observation, project.id, baseDir);
+    appendObservation(observation, project.id, baseDir);
+  } catch (err) {
+    logError(project.id, "tool-observer:handleToolStart", err, baseDir);
+  }
 }
 
 /**
@@ -83,23 +88,27 @@ export function handleToolEnd(
   project: ProjectEntry,
   baseDir?: string
 ): void {
-  if (shouldSkipObservation()) return;
+  try {
+    if (shouldSkipObservation()) return;
 
-  const raw =
-    typeof event.result === "string" ? event.result : JSON.stringify(event.result);
-  const output = truncate(scrubSecrets(raw), MAX_TOOL_OUTPUT_LENGTH);
+    const raw =
+      typeof event.result === "string" ? event.result : JSON.stringify(event.result);
+    const output = truncate(scrubSecrets(raw), MAX_TOOL_OUTPUT_LENGTH);
 
-  const observation: Observation = {
-    timestamp: new Date().toISOString(),
-    event: "tool_complete",
-    session: getSessionId(ctx),
-    project_id: project.id,
-    project_name: project.name,
-    tool: event.toolName,
-    output,
-    is_error: event.isError,
-    ...buildActiveInstincts(),
-  };
+    const observation: Observation = {
+      timestamp: new Date().toISOString(),
+      event: "tool_complete",
+      session: getSessionId(ctx),
+      project_id: project.id,
+      project_name: project.name,
+      tool: event.toolName,
+      output,
+      is_error: event.isError,
+      ...buildActiveInstincts(),
+    };
 
-  appendObservation(observation, project.id, baseDir);
+    appendObservation(observation, project.id, baseDir);
+  } catch (err) {
+    logError(project.id, "tool-observer:handleToolEnd", err, baseDir);
+  }
 }

@@ -35,6 +35,7 @@ import { handleInstinctImport, COMMAND_NAME as IMPORT_CMD } from "./instinct-imp
 import { handleInstinctPromote, COMMAND_NAME as PROMOTE_CMD } from "./instinct-promote.js";
 import { handleInstinctEvolve, COMMAND_NAME as EVOLVE_CMD } from "./instinct-evolve.js";
 import { handleInstinctProjects, COMMAND_NAME as PROJECTS_CMD } from "./instinct-projects.js";
+import { logError } from "./error-logger.js";
 import type { Config, ProjectEntry } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -67,30 +68,34 @@ export default function (pi: ExtensionAPI): void {
   // session_start: bootstrap all stateful components
   // -------------------------------------------------------------------------
   pi.on("session_start", async (_event, ctx) => {
-    config = loadConfig();
-    project = await detectProject(pi, ctx.cwd);
-    ensureStorageLayout(project);
-    cleanOldArchives(project.id);
-    systemPromptFile = writeSystemPromptFile();
+    try {
+      config = loadConfig();
+      project = await detectProject(pi, ctx.cwd);
+      ensureStorageLayout(project);
+      cleanOldArchives(project.id);
+      systemPromptFile = writeSystemPromptFile();
 
-    const capturedProject = project;
-    const capturedConfig = config;
-    const capturedPromptFile = systemPromptFile;
-    const capturedCwd = ctx.cwd;
+      const capturedProject = project;
+      const capturedConfig = config;
+      const capturedPromptFile = systemPromptFile;
+      const capturedCwd = ctx.cwd;
 
-    startAnalyzerTimer(capturedConfig, capturedProject.id, async () => {
-      const obsPath = getObservationsPath(capturedProject.id);
-      const instinctsDir = getProjectInstinctsDir(capturedProject.id, "personal");
-      const userPrompt = buildAnalyzerUserPrompt(obsPath, instinctsDir, capturedProject);
-      await runAnalysis({
-        systemPromptFile: capturedPromptFile,
-        userPrompt,
-        cwd: capturedCwd,
-        timeoutSeconds: capturedConfig.timeout_seconds,
-        model: capturedConfig.model,
-        projectId: capturedProject.id,
+      startAnalyzerTimer(capturedConfig, capturedProject.id, async () => {
+        const obsPath = getObservationsPath(capturedProject.id);
+        const instinctsDir = getProjectInstinctsDir(capturedProject.id, "personal");
+        const userPrompt = buildAnalyzerUserPrompt(obsPath, instinctsDir, capturedProject);
+        await runAnalysis({
+          systemPromptFile: capturedPromptFile,
+          userPrompt,
+          cwd: capturedCwd,
+          timeoutSeconds: capturedConfig.timeout_seconds,
+          model: capturedConfig.model,
+          projectId: capturedProject.id,
+        });
       });
-    });
+    } catch (err) {
+      logError(project?.id ?? null, "session_start", err);
+    }
   });
 
   // -------------------------------------------------------------------------
@@ -98,17 +103,25 @@ export default function (pi: ExtensionAPI): void {
   // appendObservation uses appendFileSync - writes are already flushed
   // -------------------------------------------------------------------------
   pi.on("session_shutdown", (_event, _ctx) => {
-    stopAnalyzerTimer();
-    shutdownAnalyzer();
+    try {
+      stopAnalyzerTimer();
+      shutdownAnalyzer();
+    } catch (err) {
+      logError(project?.id ?? null, "session_shutdown", err);
+    }
   });
 
   // -------------------------------------------------------------------------
   // before_agent_start: observe prompt + inject instincts
   // -------------------------------------------------------------------------
   pi.on("before_agent_start", (event, ctx) => {
-    if (!project || !config) return;
-    handleBeforeAgentStart(event, ctx, project);
-    return handleBeforeAgentStartInjection(event, ctx, config, project.id) ?? undefined;
+    try {
+      if (!project || !config) return;
+      handleBeforeAgentStart(event, ctx, project);
+      return handleBeforeAgentStartInjection(event, ctx, config, project.id) ?? undefined;
+    } catch (err) {
+      logError(project?.id ?? null, "before_agent_start", err);
+    }
   });
 
   // -------------------------------------------------------------------------
@@ -120,25 +133,37 @@ export default function (pi: ExtensionAPI): void {
   // agent_end: observe completion + clear active instincts
   // -------------------------------------------------------------------------
   pi.on("agent_end", (event, ctx) => {
-    if (!project) return;
-    handleAgentEnd(event, ctx, project);
-    handleAgentEndClearInstincts(event, ctx);
+    try {
+      if (!project) return;
+      handleAgentEnd(event, ctx, project);
+      handleAgentEndClearInstincts(event, ctx);
+    } catch (err) {
+      logError(project?.id ?? null, "agent_end", err);
+    }
   });
 
   // -------------------------------------------------------------------------
   // tool_execution_start: observe tool input
   // -------------------------------------------------------------------------
   pi.on("tool_execution_start", (event, ctx) => {
-    if (!project) return;
-    handleToolStart(event, ctx, project);
+    try {
+      if (!project) return;
+      handleToolStart(event, ctx, project);
+    } catch (err) {
+      logError(project?.id ?? null, "tool_execution_start", err);
+    }
   });
 
   // -------------------------------------------------------------------------
   // tool_execution_end: observe tool output
   // -------------------------------------------------------------------------
   pi.on("tool_execution_end", (event, ctx) => {
-    if (!project) return;
-    handleToolEnd(event, ctx, project);
+    try {
+      if (!project) return;
+      handleToolEnd(event, ctx, project);
+    } catch (err) {
+      logError(project?.id ?? null, "tool_execution_end", err);
+    }
   });
 
   // -------------------------------------------------------------------------

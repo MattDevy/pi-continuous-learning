@@ -20,6 +20,7 @@ import { getCurrentActiveInstincts } from "./active-instincts.js";
 import { appendObservation } from "./observations.js";
 import { shouldSkipObservation } from "./observer-guard.js";
 import { scrubSecrets } from "./scrubber.js";
+import { logError } from "./error-logger.js";
 import type { Observation, ProjectEntry } from "./types.js";
 
 function getSessionId(ctx: ExtensionContext): string {
@@ -41,21 +42,25 @@ export function handleBeforeAgentStart(
   project: ProjectEntry,
   baseDir?: string
 ): void {
-  if (shouldSkipObservation()) return;
+  try {
+    if (shouldSkipObservation()) return;
 
-  const input = scrubSecrets(event.prompt);
+    const input = scrubSecrets(event.prompt);
 
-  const observation: Observation = {
-    timestamp: new Date().toISOString(),
-    event: "user_prompt",
-    session: getSessionId(ctx),
-    project_id: project.id,
-    project_name: project.name,
-    input,
-    ...buildActiveInstincts(),
-  };
+    const observation: Observation = {
+      timestamp: new Date().toISOString(),
+      event: "user_prompt",
+      session: getSessionId(ctx),
+      project_id: project.id,
+      project_name: project.name,
+      input,
+      ...buildActiveInstincts(),
+    };
 
-  appendObservation(observation, project.id, baseDir);
+    appendObservation(observation, project.id, baseDir);
+  } catch (err) {
+    logError(project.id, "prompt-observer:handleBeforeAgentStart", err, baseDir);
+  }
 }
 
 /**
@@ -68,16 +73,20 @@ export function handleAgentEnd(
   project: ProjectEntry,
   baseDir?: string
 ): void {
-  if (shouldSkipObservation()) return;
+  try {
+    if (shouldSkipObservation()) return;
 
-  const observation: Observation = {
-    timestamp: new Date().toISOString(),
-    event: "agent_end",
-    session: getSessionId(ctx),
-    project_id: project.id,
-    project_name: project.name,
-    ...buildActiveInstincts(),
-  };
+    const observation: Observation = {
+      timestamp: new Date().toISOString(),
+      event: "agent_end",
+      session: getSessionId(ctx),
+      project_id: project.id,
+      project_name: project.name,
+      ...buildActiveInstincts(),
+    };
 
-  appendObservation(observation, project.id, baseDir);
+    appendObservation(observation, project.id, baseDir);
+  } catch (err) {
+    logError(project.id, "prompt-observer:handleAgentEnd", err, baseDir);
+  }
 }
