@@ -330,8 +330,8 @@
       ],
       "notes": "",
       "startedAt": "2026-03-26T16:40:57.642Z",
-      "updatedAt": "2026-03-26T16:43:00.000Z",
-      "completedAt": "2026-03-26T16:43:00.000Z"
+      "updatedAt": "2026-03-26T16:43:18.358Z",
+      "completedAt": "2026-03-26T16:43:18.358Z"
     },
     {
       "id": "US-015",
@@ -349,11 +349,14 @@
         "Lint and typecheck pass"
       ],
       "priority": 15,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-002"
       ],
-      "notes": "Template construction - no I/O. Lives in src/prompts/analyzer-system.ts."
+      "notes": "Template construction - no I/O. Lives in src/prompts/analyzer-system.ts.",
+      "startedAt": "2026-03-26T16:43:18.360Z",
+      "updatedAt": "2026-03-26T16:45:17.756Z",
+      "completedAt": "2026-03-26T16:45:17.755Z"
     },
     {
       "id": "US-016",
