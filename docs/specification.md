@@ -13,7 +13,8 @@ Inspired by [everything-claude-code/continuous-learning-v2](https://github.com/n
 3. **Analyze** - run a background job every 5 minutes using Haiku to detect patterns
 4. **Learn** - create/update instinct files (YAML-frontmatter markdown) with confidence scoring
 5. **Apply** - inject relevant instincts into Pi's system prompt via `before_agent_start`
-6. **Manage** - provide commands to view, export, import, evolve, and promote instincts
+6. **Validate** - closed-loop feedback: track whether injected instincts align with actual session behavior, adjusting confidence based on real outcomes rather than observation count alone
+7. **Manage** - provide commands to view, export, import, evolve, and promote instincts
 
 ---
 
@@ -28,6 +29,7 @@ Pi Session
 | Extension: observation collector             |
 | - Captures tool use, errors, user prompts   |
 | - Detects project via git remote / cwd      |
+| - Tags observations with active_instincts   |  <-- feedback data
 | - Writes to projects/<hash>/observations.jsonl
 +---------------------------------------------+
   |
@@ -41,13 +43,19 @@ Pi Session
 | - Uses Pi's OAuth/subscription credentials   |
 | - No per-request API cost                    |
 | - Reads observations, writes instinct files  |
+| - FEEDBACK LOOP: cross-references            |
+|   active_instincts against actual behavior   |
+|   to confirm, contradict, or ignore          |
 +---------------------------------------------+
   |
+  | Creates/updates instincts with
+  | outcome-based confidence adjustments
   v
 +---------------------------------------------+
 | Instinct storage                             |
 | - projects/<hash>/instincts/personal/*.md    |
 | - instincts/personal/*.md (global)           |
+| - Tracks: confirmed / contradicted / ignored |
 +---------------------------------------------+
   |
   | before_agent_start event
@@ -56,6 +64,7 @@ Pi Session
 | System prompt injection                      |
 | - Reads high-confidence instincts            |
 | - Appends to system prompt for context       |
+| - Records which instincts were injected      |  <-- feeds back to observer
 +---------------------------------------------+
 ```
 
@@ -118,8 +127,11 @@ interface Observation {
   project_id: string;             // 12-char SHA256 hash of git remote URL
   project_name: string;           // Directory basename
   is_error?: boolean;             // Whether tool result was an error
+  active_instincts?: string[];    // IDs of instincts injected for this turn (feedback loop)
 }
 ```
+
+The `active_instincts` field is the key to closed-loop feedback. It is set on every observation during a turn where instincts were injected via `before_agent_start`. The analyzer uses this to cross-reference what was recommended against what actually happened.
 
 ### Instinct (YAML-frontmatter Markdown)
 
@@ -136,6 +148,9 @@ project_name: "my-react-app"
 created_at: "2025-01-22T10:30:00Z"
 updated_at: "2025-01-22T10:30:00Z"
 observation_count: 5
+confirmed_count: 3
+contradicted_count: 0
+inactive_count: 8
 ---
 
 # Prefer Functional Style
@@ -146,6 +161,7 @@ Use functional patterns over classes when appropriate.
 ## Evidence
 - Observed 5 instances of functional pattern preference
 - User corrected class-based approach to functional on 2025-01-15
+- Confirmed 3 times: agent used functional style while instinct was active
 ```
 
 ```typescript
@@ -160,7 +176,10 @@ interface Instinct {
   project_name?: string;          // Only for project-scoped
   created_at: string;             // ISO 8601
   updated_at: string;             // ISO 8601
-  observation_count: number;      // How many observations back this instinct
+  observation_count: number;      // How many observations led to this instinct
+  confirmed_count: number;        // Times behavior aligned while instinct was active
+  contradicted_count: number;     // Times behavior contradicted while instinct was active
+  inactive_count: number;         // Times instinct was active but not relevant to the turn
   title: string;                  // Human-readable title
   action: string;                 // What to do
   evidence: string[];             // Supporting evidence lines
@@ -352,18 +371,54 @@ The subprocess uses Pi's existing OAuth credentials (from `~/.pi/agent/auth.json
 Rather than asking Haiku for structured JSON and doing file I/O ourselves, we give Haiku the `read` and `write` tools and let it:
 
 1. **Read** the observations file and existing instinct files
-2. **Detect patterns**: user corrections, error resolutions, repeated workflows, tool preferences
-3. **Write** instinct `.md` files directly to the instincts directory
+2. **Detect new patterns**: user corrections, error resolutions, repeated workflows, tool preferences
+3. **Validate existing instincts** (feedback loop): for observations that have `active_instincts`, compare recommended behavior against actual behavior
+4. **Write** instinct `.md` files directly to the instincts directory - creating new ones or updating existing ones with adjusted confidence and evidence
 
 This is simpler than parsing structured output - Haiku writes the files, we just monitor for success/failure via the JSON event stream.
 
 The system prompt instructs Haiku on:
 - The exact instinct file format (YAML frontmatter + markdown)
 - Where to read observations from and write instincts to
-- Pattern detection heuristics
-- Confidence scoring rules
+- Pattern detection heuristics for new instincts
+- **Feedback analysis**: how to cross-reference `active_instincts` against observed behavior
+- Confidence scoring rules (both discovery-based and feedback-based)
 - Scope decision guide (project vs global)
 - Rules: be conservative, only clear patterns with 3+ observations, never include code snippets
+
+### Feedback Analysis (in the analyzer prompt)
+
+The analyzer prompt includes a dedicated section on feedback analysis:
+
+```
+## Feedback Analysis
+
+Some observations include an `active_instincts` field listing instinct IDs that were
+injected into the system prompt for that turn. Use this to validate existing instincts:
+
+For each instinct ID in `active_instincts`, check whether the turn's tool calls and
+outcomes align with, contradict, or are irrelevant to that instinct:
+
+- CONFIRMED: The agent's behavior matches what the instinct recommends.
+  Example: instinct "grep-before-edit" was active, and the agent did grep then edit.
+  -> Increment confirmed_count, apply +0.05 to confidence.
+
+- CONTRADICTED: The agent's behavior went against the instinct, OR the user
+  corrected toward the opposite of what the instinct recommends.
+  Example: instinct "use-functional-style" was active, but the agent wrote a class
+  and the user said "yes, use a class here" or didn't correct it.
+  -> Increment contradicted_count, apply -0.15 to confidence.
+
+- INACTIVE: The instinct was injected but the turn had nothing to do with its
+  trigger (e.g., a git instinct during a file-reading turn).
+  -> Increment inactive_count, no confidence change.
+
+Update the instinct file's frontmatter counters and confidence accordingly.
+Add a line to the Evidence section noting the feedback outcome.
+
+If an instinct's confidence drops below 0.1, add a `flagged_for_removal: true`
+field to its frontmatter. Do not delete it - the user can review via /instinct-status.
+```
 
 ### Pattern Detection
 
@@ -376,6 +431,12 @@ The system prompt instructs Haiku on:
 
 ### Confidence Scoring
 
+Confidence has two sources: **discovery** (how the instinct was created) and **feedback** (whether it holds up in practice).
+
+#### Discovery Confidence (initial)
+
+Based on how many observations led to the instinct being created:
+
 | Observation Count | Initial Confidence |
 |------------------|--------------------|
 | 1-2 | 0.3 (tentative) |
@@ -383,11 +444,27 @@ The system prompt instructs Haiku on:
 | 6-10 | 0.7 (strong) |
 | 11+ | 0.85 (very strong) |
 
-Adjustments:
-- +0.05 per confirming observation
-- -0.1 per contradicting observation
-- -0.02 per week without observation (decay, applied at analysis time)
-- Cap: 0.9 maximum
+#### Feedback Adjustments (ongoing)
+
+Once an instinct exists and is being injected into sessions, the analyzer cross-references `active_instincts` on each observation against what actually happened. This produces three outcomes per analysis batch:
+
+| Outcome | Meaning | Confidence Change |
+|---------|---------|-------------------|
+| **Confirmed** | Behavior aligned with the instinct while it was active | +0.05 |
+| **Contradicted** | Behavior went against the instinct, or user corrected toward opposite | -0.15 |
+| **Inactive** | Instinct was active but turn wasn't relevant to its trigger | No change |
+
+Additional adjustments:
+- -0.02 per week without any observation (passive decay)
+- Cap: 0.9 maximum, 0.1 minimum (below 0.1 -> flagged for removal)
+
+The key difference from the Claude Code version: discovery confidence is just the starting point. An instinct that was "observed 11 times" (0.85 initial) but gets contradicted in 3 subsequent sessions where it was actually injected will drop to ~0.4. Conversely, a tentative instinct (0.3) that keeps getting confirmed will climb faster because the confirmations come from real outcome data, not just "we saw something similar again."
+
+#### Why This Matters
+
+Without feedback, confidence is a proxy for "how often did we see a pattern." That conflates frequency with correctness. A developer might repeat a bad habit 20 times - the system would give it 0.85 confidence and start recommending it.
+
+With feedback, confidence tracks "how often does this instinct predict or improve behavior when it's actually applied." An instinct that gets injected but consistently ignored or contradicted will decay regardless of how many times the original pattern was observed.
 
 ### Timeout and Safety
 
@@ -409,6 +486,9 @@ On `before_agent_start`, load and inject relevant instincts:
 4. Sort by confidence descending
 5. Take top N instincts (default: 20, configurable)
 6. Format as a concise section appended to the system prompt
+7. **Store the list of injected instinct IDs** in extension state so the observer can tag subsequent observations with `active_instincts`
+
+Step 7 is the bridge that closes the feedback loop. The injector sets a module-level variable (e.g. `currentActiveInstincts: string[]`) that the observer reads when writing observations for that turn.
 
 ### Injection Format
 
@@ -428,7 +508,12 @@ The following patterns have been learned from previous sessions. Apply them when
 
 ### `/instinct-status`
 
-Show all instincts (project + global) grouped by domain, with confidence scores.
+Show all instincts (project + global) grouped by domain, with confidence scores and feedback stats.
+
+Displays for each instinct:
+- Confidence score and trend arrow (up/down/stable based on recent feedback)
+- Feedback ratio: `confirmed/contradicted/inactive` counts
+- Flagged instincts highlighted for review (confidence < 0.1)
 
 Implementation: `pi.registerCommand("instinct-status", ...)`
 
@@ -536,6 +621,8 @@ export default function(pi: ExtensionAPI) {
 
 8. **Process isolation** - A hung or crashing Haiku analysis can't affect the main Pi session. The subprocess is killed on timeout (120s) or session shutdown.
 
+9. **Closed-loop feedback** - The injector records which instincts were active each turn (`active_instincts` field on observations). The analyzer cross-references this against actual behavior to confirm, contradict, or mark instincts as irrelevant. This makes confidence outcome-based rather than frequency-based - an instinct that keeps getting contradicted in practice will decay regardless of how many times the original pattern was observed.
+
 ---
 
 ## Scope Decision Guide
@@ -602,13 +689,17 @@ Each analysis run uses roughly:
 ### Unit Tests
 
 - `project.ts` - project detection from git remote, path fallback, hash generation
-- `instincts.ts` - parse/serialize instinct files, merge logic, confidence calculations
-- `observer.ts` - secret scrubbing, event filtering, observation formatting
+- `instincts.ts` - parse/serialize instinct files, merge logic, confidence calculations, feedback counter updates
+- `observer.ts` - secret scrubbing, event filtering, observation formatting, `active_instincts` tagging
+- `injector.ts` - instinct filtering/sorting, shared state for active instinct IDs
 - `config.ts` - config loading, defaults, validation
 
 ### Integration Tests
 
 - Full observation -> analysis -> instinct creation pipeline
+- Feedback loop: inject instinct -> observe aligned behavior -> analyzer confirms -> confidence increases
+- Feedback loop: inject instinct -> observe contradicting behavior -> analyzer contradicts -> confidence decreases
+- Instinct flagged for removal when confidence drops below 0.1
 - Instinct injection into system prompt
 - Import/export round-trip
 - Promotion workflow
@@ -618,6 +709,7 @@ Each analysis run uses roughly:
 - Extension loads in Pi without errors
 - Commands register and execute
 - Background analyzer runs on schedule
+- `/instinct-status` shows feedback stats (confirmed/contradicted counts)
 
 ---
 
@@ -626,27 +718,29 @@ Each analysis run uses roughly:
 ### Phase 1: Core Infrastructure
 - Types, config, project detection
 - Storage layout creation
-- Instinct file CRUD
+- Instinct file CRUD (including feedback counters: confirmed/contradicted/inactive)
 
 ### Phase 2: Observation Collection
 - Event handlers for tool_call, tool_result, agent_start, agent_end
 - Secret scrubbing
 - JSONL file management with archival
+- `active_instincts` tagging on observations (reads from injector state)
 
 ### Phase 3: Background Analyzer
 - Pi CLI subprocess spawning (spawn `pi -p --mode json --model haiku`)
-- Analysis system prompt construction
+- Analysis system prompt construction (pattern detection + feedback analysis)
 - JSON event stream parsing from subprocess stdout
 - Timer management (start/stop/re-entrancy)
 - Timeout handling (SIGTERM after 120s)
 
-### Phase 4: System Prompt Injection
+### Phase 4: System Prompt Injection + Feedback Bridge
 - Load and filter instincts
 - Format injection block
 - `before_agent_start` handler
+- Store injected instinct IDs in shared state for the observer to read
 
 ### Phase 5: Commands
-- `/instinct-status`
+- `/instinct-status` (with feedback stats and trend arrows)
 - `/instinct-evolve`
 - `/instinct-export` and `/instinct-import`
 - `/instinct-promote`
@@ -654,6 +748,7 @@ Each analysis run uses roughly:
 
 ### Phase 6: Polish
 - Session guardian (active hours, idle detection)
-- Confidence decay over time
-- UI notifications for instinct creation
+- Passive confidence decay over time
+- Flagged-for-removal handling (instincts below 0.1 confidence)
+- UI notifications for instinct creation and contradiction warnings
 - Error handling and logging
