@@ -700,8 +700,8 @@
       ],
       "notes": "All AC implemented in analyzer-timer.ts as part of US-020. isWithinActiveHours, getLastObservationTime, and getSkipReason cover both guardian conditions with configurable thresholds.",
       "startedAt": "2026-03-26T17:29:03.760Z",
-      "updatedAt": "2026-03-26T17:30:30.000Z",
-      "completedAt": "2026-03-26T17:30:30.000Z"
+      "updatedAt": "2026-03-26T17:31:51.340Z",
+      "completedAt": "2026-03-26T17:31:51.340Z"
     },
     {
       "id": "US-031",
@@ -716,12 +716,15 @@
         "Lint and typecheck pass"
       ],
       "priority": 31,
-      "status": "open",
+      "status": "done",
       "dependsOn": [
         "US-008",
         "US-020"
       ],
-      "notes": "Integrates confidence decay into the analyzer run cycle."
+      "notes": "Integrates confidence decay into the analyzer run cycle.",
+      "startedAt": "2026-03-26T17:31:51.344Z",
+      "updatedAt": "2026-03-26T17:39:30.000Z",
+      "completedAt": "2026-03-26T17:39:30.000Z"
     },
     {
       "id": "US-032",

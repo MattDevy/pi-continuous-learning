@@ -713,3 +713,27 @@ Corrective Plan: N/A
   - `isWithinActiveHours` uses `getHours()` (local time) not UTC - matches user's timezone for active hours concept
   - `active_hours_end: 23` means active until 22:59 (exclusive); `end: 24` would be "always active" since `getHours()` returns 0-23
 ---
+## 2026-03-26T17:39 - US-031
+Session: iter-4e6fb65d
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Implemented `src/instinct-decay.ts` with passive confidence decay for instincts
+- `applyDecayToInstinct(instinct)`: pure function - calls `applyPassiveDecay` from confidence.ts, returns updated instinct if change >= DECAY_CHANGE_THRESHOLD (0.001), null otherwise; uses `delete (obj as Partial<T>).flagged_for_removal` pattern for exactOptionalPropertyTypes compatibility; does not mutate input
+- `applyDecayInDir(dir)`: loads all instincts from a dir via `listInstincts`, saves changed ones via `saveInstinct`, returns count of updated instincts
+- `runDecayPass(projectId?, baseDir?)`: orchestrator - applies decay to project personal dir + global personal dir; skips project scope when projectId is null/undefined; returns total updated count
+- Integrated into `src/analyzer-runner.ts`: added `projectId?: string | null` and `baseDir?: string` to `RunAnalysisParams`; calls `runDecayPass` after guards (re-entrancy/cooldown) but before `spawnAnalyzer` so decay only runs when analysis actually proceeds
+- `DECAY_CHANGE_THRESHOLD = 0.001` constant - prevents excessive fs writes for negligibly small elapsed times (< ~12 hours between runs)
+- 19 unit tests in `src/instinct-decay.test.ts`: pure decay function (8 tests), applyDecayInDir (5 tests), runDecayPass (6 tests)
+- 3 integration tests added to `src/analyzer-runner.test.ts`: verifies runDecayPass called with projectId, null, and not called when omitted
+- Added `vi.mock("./instinct-decay.js")` to analyzer-runner.test.ts (no impact on existing tests since existing params lack projectId)
+- All 506 tests pass (29 test files), lint clean, typecheck clean
+- Files changed: src/instinct-decay.ts (new), src/instinct-decay.test.ts (new), src/analyzer-runner.ts, src/analyzer-runner.test.ts
+- **Learnings for future iterations:**
+  - `delete (updated as Partial<Instinct>).flagged_for_removal` cleans optional boolean fields on spread objects - required for exactOptionalPropertyTypes; can't spread `{ flagged_for_removal: undefined }` 
+  - `DECAY_CHANGE_THRESHOLD = 0.001` is the right threshold: meaningful at ~12+ hours elapsed, avoids writes for sub-minute intervals
+  - Decay integration point is `runAnalysis` (after guards, before spawn) - decay is skipped if cooldown/re-entrancy would skip the analysis anyway
+  - When adding `vi.mock(...)` to existing test file, add default mock return value in `beforeEach` to ensure stability across all describe blocks
+  - `applyPassiveDecay` in confidence.ts uses `Date.now()` internally - tests use real old timestamps (daysAgo helper) rather than mocking time, which works cleanly
+---
