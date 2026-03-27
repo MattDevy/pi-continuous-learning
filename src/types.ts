@@ -114,4 +114,7 @@ export interface Config {
   max_new_instincts_per_run: number; // creation rate limit per analyzer run
   flagged_cleanup_days: number; // auto-delete flagged instincts after N days
   instinct_ttl_days: number; // auto-delete zero-confirmation instincts after N days
+  // Consolidation (dream) settings
+  consolidation_interval_days: number; // minimum days between consolidation runs
+  consolidation_min_sessions: number; // minimum sessions since last consolidation
 }

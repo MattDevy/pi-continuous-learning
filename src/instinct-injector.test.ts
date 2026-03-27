@@ -58,6 +58,8 @@ const BASE_CONFIG: Config = {
   max_new_instincts_per_run: 3,
   flagged_cleanup_days: 7,
   instinct_ttl_days: 28,
+  consolidation_interval_days: 7,
+  consolidation_min_sessions: 10,
 };
 
 const MOCK_CTX = {} as ExtensionContext;

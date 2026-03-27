@@ -21,6 +21,14 @@ import {
   getProjectInstinctsDir,
   getGlobalInstinctsDir,
 } from "../storage.js";
+import {
+  checkConsolidationGate,
+  countDistinctSessions,
+  loadConsolidationMeta,
+  saveConsolidationMeta,
+} from "../consolidation.js";
+import { buildConsolidateSystemPrompt } from "../prompts/consolidate-system.js";
+import { buildConsolidateUserPrompt } from "../prompts/consolidate-user.js";
 import { countObservations } from "../observations.js";
 import { runDecayPass } from "../instinct-decay.js";
 import { runCleanupPass } from "../instinct-cleanup.js";
@@ -448,8 +456,217 @@ async function analyzeProject(
 }
 
 // ---------------------------------------------------------------------------
+// Consolidation mode
+// ---------------------------------------------------------------------------
+
+async function consolidateProject(
+  project: ProjectEntry,
+  config: ReturnType<typeof loadConfig>,
+  baseDir: string,
+  logger: AnalyzeLogger,
+  force: boolean
+): Promise<AnalyzeResult> {
+  const obsPath = getObservationsPath(project.id, baseDir);
+  const sessionCount = countDistinctSessions(obsPath);
+  const meta = loadConsolidationMeta(project.id, baseDir);
+
+  if (!force) {
+    const gate = checkConsolidationGate({
+      meta,
+      currentSessionCount: sessionCount,
+      intervalDays: config.consolidation_interval_days ?? DEFAULT_CONFIG.consolidation_interval_days,
+      minSessions: config.consolidation_min_sessions ?? DEFAULT_CONFIG.consolidation_min_sessions,
+    });
+
+    if (!gate.eligible) {
+      return { ran: false, skippedReason: `consolidation gate: ${gate.reason}` };
+    }
+  }
+
+  const startTime = Date.now();
+  logger.info(`Consolidating ${project.name}`, {
+    event: "consolidation_start",
+    project_id: project.id,
+    project_name: project.name,
+    session_count: sessionCount,
+  });
+
+  // Run cleanup and decay before consolidation
+  runCleanupPass(project.id, config, baseDir);
+  runDecayPass(project.id, baseDir);
+
+  // Load all instincts
+  const projectInstincts = loadProjectInstincts(project.id, baseDir);
+  const globalInstincts = loadGlobalInstincts(baseDir);
+  const allInstincts = [...projectInstincts, ...globalInstincts];
+
+  if (allInstincts.length === 0) {
+    return { ran: false, skippedReason: "no instincts to consolidate" };
+  }
+
+  // Load AGENTS.md for deduplication
+  const agentsMdProject = readAgentsMd(join(project.root, "AGENTS.md"));
+  const agentsMdGlobal = readAgentsMd(join(homedir(), ".pi", "agent", "AGENTS.md"));
+
+  let installedSkills: InstalledSkill[] = [];
+  try {
+    const { loadSkills } = await import("@mariozechner/pi-coding-agent");
+    const result = loadSkills({ cwd: project.root });
+    installedSkills = result.skills.map((s: { name: string; description: string }) => ({
+      name: s.name,
+      description: s.description,
+    }));
+  } catch {
+    // Best effort
+  }
+
+  const systemPrompt = buildConsolidateSystemPrompt();
+  const userPrompt = buildConsolidateUserPrompt(allInstincts, {
+    agentsMdProject,
+    agentsMdGlobal,
+    installedSkills,
+    projectName: project.name,
+    projectId: project.id,
+  });
+
+  const authStorage = AuthStorage.create();
+  const modelId = (config.model || DEFAULT_CONFIG.model) as Parameters<typeof getModel>[1];
+  const model = getModel("anthropic", modelId);
+  const apiKey = await authStorage.getApiKey("anthropic");
+
+  if (!apiKey) {
+    throw new Error("No Anthropic API key configured. Set via auth.json or ANTHROPIC_API_KEY.");
+  }
+
+  const context = {
+    systemPrompt,
+    messages: [
+      { role: "user" as const, content: userPrompt, timestamp: Date.now() },
+    ],
+  };
+
+  const timeoutMs = (config.timeout_seconds ?? DEFAULT_CONFIG.timeout_seconds) * 1000;
+  const abortController = new AbortController();
+  const timeoutHandle = setTimeout(() => abortController.abort(), timeoutMs);
+
+  const instinctCounts = { created: 0, updated: 0, deleted: 0 };
+  const createdSummaries: InstinctChangeSummary[] = [];
+  const updatedSummaries: InstinctChangeSummary[] = [];
+  const deletedSummaries: InstinctChangeSummary[] = [];
+  const projectInstinctsDir = getProjectInstinctsDir(project.id, "personal", baseDir);
+  const globalInstinctsDir = getGlobalInstinctsDir("personal", baseDir);
+
+  let singleShotMessage;
+  try {
+    const result = await runSingleShot(context, model, apiKey, abortController.signal);
+    singleShotMessage = result.message;
+
+    // Consolidation allows more creates than normal analysis (merges produce new instincts)
+    const maxNewInstincts = (config.max_new_instincts_per_run ?? DEFAULT_CONFIG.max_new_instincts_per_run) * 2;
+    let createsRemaining = maxNewInstincts;
+
+    for (const change of result.changes) {
+      if (change.action === "delete") {
+        const id = change.id;
+        if (!id) continue;
+        const dir = change.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
+        const filePath = join(dir, `${id}.md`);
+        if (existsSync(filePath)) {
+          unlinkSync(filePath);
+          instinctCounts.deleted++;
+          deletedSummaries.push({ id, title: id, scope: change.scope ?? "project" });
+        }
+      } else if (change.action === "create") {
+        if (createsRemaining <= 0) continue;
+        const existing = allInstincts.find((i) => i.id === change.instinct?.id) ?? null;
+        const instinct = buildInstinctFromChange(change, existing, project.id, allInstincts);
+        if (!instinct) continue;
+
+        const dir = instinct.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
+        saveInstinct(instinct, dir);
+        instinctCounts.created++;
+        createsRemaining--;
+        createdSummaries.push({
+          id: instinct.id,
+          title: instinct.title,
+          scope: instinct.scope,
+          trigger: instinct.trigger,
+          action: instinct.action,
+        });
+      } else {
+        const existing = allInstincts.find((i) => i.id === change.instinct?.id) ?? null;
+        const instinct = buildInstinctFromChange(change, existing, project.id, allInstincts);
+        if (!instinct) continue;
+
+        const dir = instinct.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
+        saveInstinct(instinct, dir);
+        instinctCounts.updated++;
+        const delta = existing ? instinct.confidence - existing.confidence : undefined;
+        updatedSummaries.push({
+          id: instinct.id,
+          title: instinct.title,
+          scope: instinct.scope,
+          ...(delta !== undefined ? { confidence_delta: delta } : {}),
+        });
+      }
+    }
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+
+  const usage = singleShotMessage!.usage;
+  const durationMs = Date.now() - startTime;
+
+  const stats: ProjectRunStats = {
+    project_id: project.id,
+    project_name: project.name,
+    duration_ms: durationMs,
+    observations_processed: 0,
+    observations_total: 0,
+    instincts_created: instinctCounts.created,
+    instincts_updated: instinctCounts.updated,
+    instincts_deleted: instinctCounts.deleted,
+    tokens_input: usage.input,
+    tokens_output: usage.output,
+    tokens_cache_read: usage.cacheRead,
+    tokens_cache_write: usage.cacheWrite,
+    tokens_total: usage.totalTokens,
+    cost_usd: usage.cost.total,
+    model: modelId,
+  };
+
+  logger.projectComplete(stats);
+
+  // Write analysis event for extension notification
+  const analysisEvent: AnalysisEvent = {
+    timestamp: new Date().toISOString(),
+    project_id: project.id,
+    project_name: project.name,
+    created: createdSummaries,
+    updated: updatedSummaries,
+    deleted: deletedSummaries,
+  };
+  appendAnalysisEvent(analysisEvent, baseDir);
+
+  // Update consolidation meta
+  saveConsolidationMeta(
+    project.id,
+    {
+      last_consolidation_at: new Date().toISOString(),
+      last_consolidation_session_count: sessionCount,
+    },
+    baseDir
+  );
+
+  return { ran: true, stats };
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
+
+const isConsolidateMode = process.argv.includes("--consolidate");
+const isForceMode = process.argv.includes("--force");
 
 async function main(): Promise<void> {
   const baseDir = getBaseDir();
@@ -474,7 +691,8 @@ async function main(): Promise<void> {
       return;
     }
 
-    logger.runStart(projects.length);
+    const mode = isConsolidateMode ? "consolidation" : "analysis";
+    logger.info(`Starting ${mode} run`, { event: "run_start", mode, project_count: projects.length });
 
     let processed = 0;
     let skipped = 0;
@@ -483,7 +701,10 @@ async function main(): Promise<void> {
 
     for (const project of projects) {
       try {
-        const result = await analyzeProject(project, config, baseDir, logger);
+        const result = isConsolidateMode
+          ? await consolidateProject(project, config, baseDir, logger, isForceMode)
+          : await analyzeProject(project, config, baseDir, logger);
+
         if (result.ran && result.stats) {
           processed++;
           allProjectStats.push(result.stats);
