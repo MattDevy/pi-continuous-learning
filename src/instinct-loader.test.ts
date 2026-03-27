@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { filterInstincts, loadAndFilterInstincts, loadAndFilterFromConfig } from "./instinct-loader.js";
-import { saveInstinct } from "./instinct-store.js";
+import { saveInstinct, invalidateCache } from "./instinct-store.js";
 import { getProjectInstinctsDir, getGlobalInstinctsDir } from "./storage.js";
 import type { Instinct, Config } from "./types.js";
 
@@ -40,6 +40,7 @@ const BASE_CONFIG: Config = {
   min_observations_to_analyze: 20,
   min_confidence: 0.5,
   max_instincts: 20,
+  max_injection_chars: 4000,
   model: "claude-haiku-4-5",
   timeout_seconds: 120,
   active_hours_start: 8,
@@ -135,6 +136,10 @@ describe("loadAndFilterInstincts", () => {
     mkdirSync(getGlobalInstinctsDir("personal", baseDir), { recursive: true });
   });
 
+  beforeEach(() => {
+    invalidateCache();
+  });
+
   afterAll(() => {
     rmSync(baseDir, { recursive: true, force: true });
   });
@@ -215,6 +220,10 @@ describe("loadAndFilterFromConfig", () => {
   beforeAll(() => {
     baseDir = mkdtempSync(join(tmpdir(), "pi-cl-config-test-"));
     mkdirSync(getGlobalInstinctsDir("personal", baseDir), { recursive: true });
+  });
+
+  beforeEach(() => {
+    invalidateCache();
   });
 
   afterAll(() => {

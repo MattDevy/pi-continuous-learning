@@ -9,6 +9,36 @@ import { loadProjectInstincts, loadGlobalInstincts } from "./instinct-store.js";
 import { DEFAULT_CONFIG } from "./config.js";
 
 // ---------------------------------------------------------------------------
+// Domain inference
+// ---------------------------------------------------------------------------
+
+const UNIVERSAL_DOMAINS = new Set(["workflow", "git"]);
+
+const DOMAIN_KEYWORDS: Record<string, string[]> = {
+  typescript: ["typescript", ".ts", "type ", "interface ", "generic"],
+  css: ["css", "style", "tailwind", "classname", "scss", "sass"],
+  testing: ["test", "spec", "vitest", "jest", "coverage", "assert"],
+  git: ["git", "commit", "branch", "merge", "rebase", "stash"],
+  debugging: ["debug", "error", "stack trace", "exception", "breakpoint"],
+  performance: ["performance", "slow", "memory", "profil", "latency", "cache"],
+  security: ["security", "auth", "token", "secret", "csrf", "xss", "injection"],
+  documentation: ["documentation", "readme", "jsdoc", "docstring"],
+  design: ["component", "ui ", "layout", "responsive", "accessibility"],
+  workflow: ["workflow", "ci", "pipeline", "deploy", "automat"],
+};
+
+export function inferDomains(userPrompt: string): Set<string> {
+  const lower = userPrompt.toLowerCase();
+  const matched = new Set<string>();
+  for (const [domain, keywords] of Object.entries(DOMAIN_KEYWORDS)) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      matched.add(domain);
+    }
+  }
+  return matched;
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -21,6 +51,8 @@ export interface LoadInstinctsOptions {
   maxInstincts?: number;
   /** Optional base directory for storage (used in tests). */
   baseDir?: string;
+  /** Domains relevant to the current context — matched instincts sort first. */
+  relevantDomains?: Set<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -34,13 +66,23 @@ export interface LoadInstinctsOptions {
 export function filterInstincts(
   instincts: Instinct[],
   minConfidence: number,
-  maxInstincts: number
+  maxInstincts: number,
+  relevantDomains?: Set<string>
 ): Instinct[] {
   const eligible = instincts.filter(
     (i) => !i.flagged_for_removal && i.confidence >= minConfidence
   );
 
-  const sorted = [...eligible].sort((a, b) => b.confidence - a.confidence);
+  const sorted = [...eligible].sort((a, b) => {
+    // When relevantDomains are provided, prioritize domain-matched instincts
+    if (relevantDomains && relevantDomains.size > 0) {
+      const aRelevant = relevantDomains.has(a.domain) || UNIVERSAL_DOMAINS.has(a.domain);
+      const bRelevant = relevantDomains.has(b.domain) || UNIVERSAL_DOMAINS.has(b.domain);
+      if (aRelevant && !bRelevant) return -1;
+      if (!aRelevant && bRelevant) return 1;
+    }
+    return b.confidence - a.confidence;
+  });
 
   return sorted.slice(0, maxInstincts);
 }
@@ -64,6 +106,7 @@ export function loadAndFilterInstincts(
     minConfidence = DEFAULT_CONFIG.min_confidence,
     maxInstincts = DEFAULT_CONFIG.max_instincts,
     baseDir,
+    relevantDomains,
   } = options;
 
   const projectInstincts =
@@ -76,7 +119,7 @@ export function loadAndFilterInstincts(
   // Combine: project instincts first, then global (project-scoped are more specific)
   const all = [...projectInstincts, ...globalInstincts];
 
-  return filterInstincts(all, minConfidence, maxInstincts);
+  return filterInstincts(all, minConfidence, maxInstincts, relevantDomains);
 }
 
 // ---------------------------------------------------------------------------
@@ -89,7 +132,8 @@ export function loadAndFilterInstincts(
 export function loadAndFilterFromConfig(
   config: Config,
   projectId?: string | null,
-  baseDir?: string
+  baseDir?: string,
+  relevantDomains?: Set<string>
 ): Instinct[] {
   const opts: LoadInstinctsOptions = {
     minConfidence: config.min_confidence,
@@ -97,5 +141,6 @@ export function loadAndFilterFromConfig(
   };
   if (projectId !== undefined) opts.projectId = projectId;
   if (baseDir !== undefined) opts.baseDir = baseDir;
+  if (relevantDomains !== undefined) opts.relevantDomains = relevantDomains;
   return loadAndFilterInstincts(opts);
 }

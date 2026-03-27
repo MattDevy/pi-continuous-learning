@@ -81,6 +81,7 @@ export interface Config {
   min_observations_to_analyze: number;
   min_confidence: number;
   max_instincts: number;
+  max_injection_chars: number;
   model: string;
   timeout_seconds: number;
   active_hours_start: number; // 0-23

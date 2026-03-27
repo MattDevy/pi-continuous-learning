@@ -123,6 +123,7 @@ describe("types exports", () => {
       min_observations_to_analyze: 20,
       min_confidence: 0.5,
       max_instincts: 20,
+      max_injection_chars: 4000,
       model: "claude-haiku-4-5",
       timeout_seconds: 120,
       active_hours_start: 8,

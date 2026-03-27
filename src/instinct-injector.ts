@@ -14,7 +14,7 @@ export interface InjectionResult {
   /** Replacement system prompt to use for this turn. */
   systemPrompt?: string;
 }
-import { loadAndFilterFromConfig } from "./instinct-loader.js";
+import { loadAndFilterFromConfig, inferDomains } from "./instinct-loader.js";
 import {
   setCurrentActiveInstincts,
   clearActiveInstincts,
@@ -34,17 +34,34 @@ export const INSTINCTS_HEADER = "## Learned Behaviors (Instincts)";
  * Builds the injection block string from a list of instincts.
  * Returns null when the list is empty (no block needed).
  */
-export function buildInjectionBlock(instincts: Instinct[]): string | null {
+export function buildInjectionBlock(instincts: Instinct[], maxChars?: number): string | null {
   if (instincts.length === 0) return null;
 
-  const bullets = instincts
-    .map((i) => {
-      const confidence = i.confidence.toFixed(2);
-      return `- [${confidence}] ${i.trigger}: ${i.action}`;
-    })
-    .join("\n");
+  const headerLen = `\n\n${INSTINCTS_HEADER}\n`.length;
+  const allBullets: string[] = [];
+  let charCount = headerLen;
+  let omitted = 0;
 
-  return `\n\n${INSTINCTS_HEADER}\n${bullets}`;
+  for (const i of instincts) {
+    const bullet = `- [${i.confidence.toFixed(2)}] ${i.trigger}: ${i.action}`;
+    const bulletLen = bullet.length + 1; // +1 for newline
+
+    if (maxChars && charCount + bulletLen > maxChars) {
+      omitted = instincts.length - allBullets.length;
+      break;
+    }
+
+    allBullets.push(bullet);
+    charCount += bulletLen;
+  }
+
+  if (allBullets.length === 0) return null;
+
+  let result = `\n\n${INSTINCTS_HEADER}\n${allBullets.join("\n")}`;
+  if (omitted > 0) {
+    result += `\n(${omitted} lower-confidence instinct${omitted > 1 ? "s" : ""} omitted)`;
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,16 +99,17 @@ export function handleBeforeAgentStartInjection(
   projectId?: string | null,
   baseDir?: string
 ): InjectionResult | void {
-  const instincts = loadAndFilterFromConfig(config, projectId, baseDir);
+  const relevantDomains = inferDomains(event.prompt);
+  const instincts = loadAndFilterFromConfig(config, projectId, baseDir, relevantDomains);
 
-  const modified = injectInstincts(event.systemPrompt, instincts);
-  if (modified === null) {
+  const block = buildInjectionBlock(instincts, config.max_injection_chars);
+  if (block === null) {
     setCurrentActiveInstincts([]);
     return undefined;
   }
 
   setCurrentActiveInstincts(instincts.map((i) => i.id));
-  return { systemPrompt: modified };
+  return { systemPrompt: event.systemPrompt + block };
 }
 
 // ---------------------------------------------------------------------------

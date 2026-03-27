@@ -4,7 +4,7 @@
  * Path traversal prevention: instinct IDs must be kebab-case (no ".." possible).
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { Instinct } from "./types.js";
 import { parseInstinct, serializeInstinct } from "./instinct-parser.js";
@@ -15,6 +15,63 @@ import {
 } from "./storage.js";
 
 const INSTINCT_EXTENSION = ".md";
+
+// ---------------------------------------------------------------------------
+// Mtime-based cache
+// ---------------------------------------------------------------------------
+
+const CACHE_TTL_MS = 5_000;
+
+interface DirCache {
+  instincts: Instinct[];
+  maxMtime: number;
+  checkedAt: number;
+}
+
+const dirCache = new Map<string, DirCache>();
+
+export function invalidateCache(dir?: string): void {
+  if (dir) {
+    dirCache.delete(dir);
+  } else {
+    dirCache.clear();
+  }
+}
+
+function getMaxMtime(dir: string): number {
+  if (!existsSync(dir)) return 0;
+  const files = readdirSync(dir).filter((f) => f.endsWith(INSTINCT_EXTENSION));
+  let max = 0;
+  for (const file of files) {
+    try {
+      const mt = statSync(join(dir, file)).mtimeMs;
+      if (mt > max) max = mt;
+    } catch {
+      // skip files that disappeared between readdir and stat
+    }
+  }
+  return max;
+}
+
+function listInstinctsCached(dir: string): Instinct[] {
+  const now = Date.now();
+  const cached = dirCache.get(dir);
+
+  if (cached && now - cached.checkedAt < CACHE_TTL_MS) {
+    return cached.instincts;
+  }
+
+  const currentMaxMtime = getMaxMtime(dir);
+
+  if (cached && currentMaxMtime === cached.maxMtime && currentMaxMtime > 0) {
+    dirCache.set(dir, { ...cached, checkedAt: now });
+    return cached.instincts;
+  }
+
+  const instincts = listInstincts(dir);
+  dirCache.set(dir, { instincts, maxMtime: currentMaxMtime, checkedAt: now });
+  return instincts;
+}
 
 /**
  * Guard against path traversal attacks in instinct IDs.
@@ -80,7 +137,7 @@ export function loadProjectInstincts(
   baseDir = getBaseDir()
 ): Instinct[] {
   const dir = getProjectInstinctsDir(projectId, "personal", baseDir);
-  return listInstincts(dir);
+  return listInstinctsCached(dir);
 }
 
 /**
@@ -88,5 +145,5 @@ export function loadProjectInstincts(
  */
 export function loadGlobalInstincts(baseDir = getBaseDir()): Instinct[] {
   const dir = getGlobalInstinctsDir("personal", baseDir);
-  return listInstincts(dir);
+  return listInstinctsCached(dir);
 }

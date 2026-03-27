@@ -26,7 +26,7 @@ import {
 } from "../storage.js";
 import { countObservations } from "../observations.js";
 import { runDecayPass } from "../instinct-decay.js";
-import { buildAnalyzerUserPrompt } from "../prompts/analyzer-user.js";
+import { buildAnalyzerUserPrompt, tailObservationsSince } from "../prompts/analyzer-user.js";
 import { buildAnalyzerSystemPrompt } from "./analyze-prompt.js";
 import {
   createInstinctListTool,
@@ -34,6 +34,9 @@ import {
   createInstinctWriteTool,
   createInstinctDeleteTool,
 } from "../instinct-tools.js";
+import { readAgentsMd } from "../agents-md.js";
+import { homedir } from "node:os";
+import type { InstalledSkill } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Lockfile guard — ensures only one instance runs at a time
@@ -106,6 +109,7 @@ function startGlobalTimeout(timeoutMs: number): void {
 
 interface ProjectMeta {
   last_analyzed_at?: string;
+  last_observation_line_count?: number;
 }
 
 function loadProjectsRegistry(baseDir: string): Record<string, ProjectEntry> {
@@ -155,17 +159,44 @@ async function analyzeProject(
 
   if (!hasNewObservations(project.id, meta, baseDir)) return false;
 
+  const obsPath = getObservationsPath(project.id, baseDir);
+  const sinceLineCount = meta.last_observation_line_count ?? 0;
+  const { lines: newObsLines, totalLineCount } = tailObservationsSince(obsPath, sinceLineCount);
+
+  if (newObsLines.length === 0) return false;
+
   const obsCount = countObservations(project.id, baseDir);
   if (obsCount < config.min_observations_to_analyze) return false;
 
-  console.log(`[analyze] Processing ${project.name} (${project.id}): ${obsCount} observations`);
+  console.log(
+    `[analyze] Processing ${project.name} (${project.id}): ${newObsLines.length} new observations (${obsCount} total)`
+  );
 
   runDecayPass(project.id, baseDir);
 
-  const obsPath = getObservationsPath(project.id, baseDir);
   const instinctsDir = join(getProjectDir(project.id, baseDir), "instincts", "personal");
 
-  const userPrompt = buildAnalyzerUserPrompt(obsPath, instinctsDir, project);
+  const agentsMdProject = readAgentsMd(join(project.root, "AGENTS.md"));
+  const agentsMdGlobal = readAgentsMd(join(homedir(), ".pi", "agent", "AGENTS.md"));
+
+  let installedSkills: InstalledSkill[] = [];
+  try {
+    const { loadSkills } = await import("@mariozechner/pi-coding-agent");
+    const result = loadSkills({ cwd: project.root });
+    installedSkills = result.skills.map((s: { name: string; description: string }) => ({
+      name: s.name,
+      description: s.description,
+    }));
+  } catch {
+    // Skills loading is best-effort — continue without them
+  }
+
+  const userPrompt = buildAnalyzerUserPrompt(obsPath, instinctsDir, project, {
+    agentsMdProject,
+    agentsMdGlobal,
+    installedSkills,
+    observationLines: newObsLines,
+  });
 
   const authStorage = AuthStorage.create();
   const modelRegistry = new ModelRegistry(authStorage);
@@ -199,7 +230,11 @@ async function analyzeProject(
     session.dispose();
   }
 
-  saveProjectMeta(project.id, { ...meta, last_analyzed_at: new Date().toISOString() }, baseDir);
+  saveProjectMeta(
+    project.id,
+    { ...meta, last_analyzed_at: new Date().toISOString(), last_observation_line_count: totalLineCount },
+    baseDir
+  );
   console.log(`[analyze] Completed ${project.name}`);
   return true;
 }

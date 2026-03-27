@@ -4,8 +4,13 @@
   "description": "A Pi extension that observes coding sessions and distills patterns into reusable instincts.",
   "type": "module",
   "keywords": [
-    "pi-package"
+    "pi-package",
+    "pi-extension"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MattDevy/pi-continuous-learning.git"
+  },
   "pi": {
     "extensions": [
       "src/index.ts"

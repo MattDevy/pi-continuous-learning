@@ -32,10 +32,42 @@ export function tailObservations(
   return lines.slice(-maxEntries);
 }
 
+export interface TailSinceResult {
+  lines: string[];
+  totalLineCount: number;
+}
+
+export function tailObservationsSince(
+  observationsPath: string,
+  sinceLineCount: number,
+  maxEntries = MAX_TAIL_ENTRIES
+): TailSinceResult {
+  if (!existsSync(observationsPath)) {
+    return { lines: [], totalLineCount: 0 };
+  }
+  const content = readFileSync(observationsPath, "utf-8");
+  const allLines = content
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+
+  const totalLineCount = allLines.length;
+
+  // If file was archived/reset (fewer lines than cursor), treat as fresh
+  const effectiveSince = totalLineCount < sinceLineCount ? 0 : sinceLineCount;
+  const newLines = allLines.slice(effectiveSince);
+
+  return {
+    lines: newLines.slice(-maxEntries),
+    totalLineCount,
+  };
+}
+
 export interface AnalyzerUserPromptOptions {
   agentsMdProject?: string | null;
   agentsMdGlobal?: string | null;
   installedSkills?: InstalledSkill[];
+  observationLines?: string[];
 }
 
 /**
@@ -55,13 +87,17 @@ export function buildAnalyzerUserPrompt(
   project: ProjectEntry,
   options: AnalyzerUserPromptOptions = {}
 ): string {
-  const { agentsMdProject = null, agentsMdGlobal = null, installedSkills = [] } = options;
+  const { agentsMdProject = null, agentsMdGlobal = null, installedSkills = [], observationLines } = options;
 
-  const tailedLines = tailObservations(observationsPath);
+  const tailedLines = observationLines ?? tailObservations(observationsPath);
   const observationBlock =
     tailedLines.length > 0
       ? tailedLines.join("\n")
       : "(no observations recorded yet)";
+
+  const entriesLabel = observationLines
+    ? `new observations since last analysis (up to ${MAX_TAIL_ENTRIES})`
+    : `most recent entries (up to ${MAX_TAIL_ENTRIES})`;
 
   const parts: string[] = [
     "## Analysis Task",
@@ -78,7 +114,7 @@ export function buildAnalyzerUserPrompt(
     `Observations file: ${observationsPath}`,
     `Instincts directory: ${instinctsDir}`,
     "",
-    `The following observations are the most recent entries (up to ${MAX_TAIL_ENTRIES}):`,
+    `The following observations are ${entriesLabel}:`,
     "",
     "```",
     observationBlock,
@@ -111,8 +147,9 @@ export function buildAnalyzerUserPrompt(
     "2. Analyze the observations above for patterns following the system prompt rules.",
     "3. Create new instinct files or update existing ones in the instincts directory.",
     "4. Apply feedback analysis using the active_instincts field in each observation.",
-    "5. Apply passive confidence decay to existing instincts before updating.",
-    "6. Do not delete any instinct files - only create or update."
+    "5. Do not delete any instinct files - only create or update.",
+    "",
+    "Note: Passive confidence decay has already been applied to existing instincts before this analysis."
   );
 
   return parts.join("\n");

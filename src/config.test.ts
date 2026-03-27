@@ -33,6 +33,7 @@ describe("loadConfig", () => {
       min_observations_to_analyze: 50,
       min_confidence: 0.7,
       max_instincts: 30,
+      max_injection_chars: 6000,
       model: "claude-opus-4-5",
       timeout_seconds: 240,
       active_hours_start: 9,
