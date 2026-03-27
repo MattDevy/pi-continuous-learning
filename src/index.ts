@@ -33,6 +33,7 @@ import { handleInstinctPromote, COMMAND_NAME as PROMOTE_CMD } from "./instinct-p
 import { handleInstinctEvolve, COMMAND_NAME as EVOLVE_CMD } from "./instinct-evolve.js";
 import { handleInstinctProjects, COMMAND_NAME as PROJECTS_CMD } from "./instinct-projects.js";
 import { handleInstinctGraduate, COMMAND_NAME as GRADUATE_CMD } from "./instinct-graduate.js";
+import { handleInstinctDream, COMMAND_NAME as DREAM_CMD } from "./instinct-dream.js";
 import { registerAllTools } from "./instinct-tools.js";
 import { logError } from "./error-logger.js";
 import { checkAnalysisNotifications } from "./analysis-notification.js";
@@ -207,6 +208,20 @@ export default function (pi: ExtensionAPI): void {
         project?.id,
         undefined,
         project?.root ?? null
+      ),
+  });
+
+  pi.registerCommand(DREAM_CMD, {
+    description: "Holistic consolidation review of all instincts (merge, deduplicate, resolve contradictions)",
+    handler: (args: string, ctx: ExtensionCommandContext) =>
+      handleInstinctDream(
+        args,
+        ctx,
+        pi,
+        project?.id,
+        undefined,
+        project?.root ?? null,
+        installedSkills
       ),
   });
 }

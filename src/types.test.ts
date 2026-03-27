@@ -161,6 +161,9 @@ describe("types exports", () => {
       max_new_instincts_per_run: 3,
       flagged_cleanup_days: 7,
       instinct_ttl_days: 28,
+      dreaming_enabled: true,
+      consolidation_interval_days: 7,
+      consolidation_min_sessions: 10,
     };
     expect(config.run_interval_minutes).toBe(5);
     expect(config.model).toBe("claude-haiku-4-5");

@@ -61,15 +61,20 @@ pi-continuous-learning/
     instinct-evolve.ts      # /instinct-evolve command (LLM-powered)
     instinct-export.ts      # /instinct-export command
     instinct-graduate.ts    # /instinct-graduate command (graduation pipeline)
+    instinct-dream.ts       # /instinct-dream command (holistic consolidation)
     instinct-import.ts      # /instinct-import command
     instinct-promote.ts     # /instinct-promote command
     instinct-projects.ts    # /instinct-projects command
+    consolidation.ts        # Consolidation gate logic, session counting, meta persistence
     graduation.ts           # Pure graduation logic (maturity, TTL, candidates)
     skill-scaffold.ts       # Skill scaffolding from instinct clusters
     command-scaffold.ts     # Command scaffolding from instinct clusters
     observation-signal.ts   # Low-signal batch scoring (early exit for analyzer)
     prompts/
       evolve-prompt.ts                  # Prompt template for /instinct-evolve
+      dream-prompt.ts                   # Prompt template for /instinct-dream
+      consolidate-system.ts             # System prompt for automated consolidation
+      consolidate-user.ts               # User prompt builder for consolidation
       analyzer-user.ts                  # User prompt builder (legacy agentic analyzer)
       analyzer-system-single-shot.ts    # System prompt for single-shot analyzer
       analyzer-user-single-shot.ts      # User prompt builder for single-shot analyzer

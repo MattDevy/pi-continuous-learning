@@ -89,6 +89,10 @@ Defined in `config.ts`. The extension reads `~/.pi/continuous-learning/config.js
   max_new_instincts_per_run: 3,           // Max new instincts created by the analyzer per run
   flagged_cleanup_days: 7,               // Auto-delete flagged_for_removal instincts after N days
   instinct_ttl_days: 28,                 // Auto-delete zero-confirmation instincts after N days
+  // Consolidation (dream)
+  dreaming_enabled: true,                 // Whether automatic consolidation runs during normal analysis
+  consolidation_interval_days: 7,         // Minimum days between consolidation runs
+  consolidation_min_sessions: 10,         // Minimum sessions since last consolidation
 }
 ```
 
@@ -517,6 +521,68 @@ All registered in `index.ts` via `pi.registerCommand()`.
 | `/instinct-evolve` | `instinct-evolve.ts` | LLM-powered analysis: suggests merges, duplicates, promotions, cleanup |
 | `/instinct-graduate` | `instinct-graduate.ts` | Graduate mature instincts to AGENTS.md, skills, or commands |
 | `/instinct-projects` | `instinct-projects.ts` | List known projects with instinct counts |
+| `/instinct-dream` | `instinct-dream.ts` | Holistic consolidation review: merges, dedup, contradictions, promotions |
+
+---
+
+## Consolidation (Dream) Pass
+
+Periodic holistic review of the entire instinct corpus, independent of new observations. Inspired by Claude Code's Auto Dream feature.
+
+### Two entry points
+
+1. **Automatic (normal analyzer run)**: After analyzing observations for all projects, the analyzer opportunistically runs consolidation for each project if `dreaming_enabled` is `true` (default) and the dual-gate conditions are met. No separate cron job needed.
+2. **Manual CLI flag**: `npx tsx src/cli/analyze.ts --consolidate` - runs consolidation only (skips observation analysis), always forces past the gate check.
+3. **Slash command**: `/instinct-dream` - interactive, runs in a Pi session with user confirmation.
+
+### Dual-gate trigger (automatic mode)
+
+Both conditions must be met before an automatic consolidation runs:
+- At least `consolidation_interval_days` (default: 7) since last consolidation
+- At least `consolidation_min_sessions` (default: 10) new sessions since last consolidation
+
+Set `dreaming_enabled: false` in config to disable automatic consolidation entirely.
+
+### Consolidation meta
+
+Per-project state stored in `projects/<id>/consolidation.json`:
+```json
+{
+  "last_consolidation_at": "2026-03-20T10:00:00Z",
+  "last_consolidation_session_count": 42
+}
+```
+
+Session count is derived from distinct `session` values in the project's `observations.jsonl`.
+
+### What consolidation does
+
+1. **Skips the observation pipeline** - no observations are read or analyzed
+2. **Loads all instincts** (project + global)
+3. **Sends a consolidation prompt** asking the LLM to:
+   - Identify merge candidates (similar trigger + action)
+   - Flag stale instincts (old, zero confirmations, high inactive count)
+   - Resolve contradictions (opposing actions for similar triggers)
+   - Suggest promotions (high-confidence project -> global)
+   - Remove AGENTS.md duplicates
+4. **Applies changes** via the same create/update/delete pipeline as normal analysis
+5. **Updates consolidation meta** with timestamp and current session count
+
+### Modules
+
+| Module | Responsibility |
+|---|---|
+| `consolidation.ts` | Gate logic (pure), session counting, meta persistence |
+| `prompts/consolidate-system.ts` | System prompt for automated consolidation |
+| `prompts/consolidate-user.ts` | User prompt builder (instincts + AGENTS.md, no observations) |
+| `prompts/dream-prompt.ts` | Interactive prompt for `/instinct-dream` command |
+| `instinct-dream.ts` | `/instinct-dream` command handler |
+
+### Rate limits
+
+Consolidation allows `2x` the normal `max_new_instincts_per_run` creation rate limit, since merges produce new instincts while deleting originals.
+
+---
 
 ## LLM Tools
 
