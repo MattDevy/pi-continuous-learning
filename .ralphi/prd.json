@@ -124,8 +124,8 @@
       ],
       "notes": "InstalledSkill interface was added in US-002. SKILL_DOMAINS goes in config.ts. The Pi SDK skill API is unknown - wrap in try-catch and document with TODO.",
       "startedAt": "2026-03-27T10:47:31.800Z",
-      "updatedAt": "2026-03-27T11:02:00.000Z",
-      "completedAt": "2026-03-27T11:02:00.000Z"
+      "updatedAt": "2026-03-27T11:00:40.551Z",
+      "completedAt": "2026-03-27T11:00:40.551Z"
     },
     {
       "id": "US-006",
@@ -143,11 +143,14 @@
         "npx vitest run && npx eslint src/ && npx tsc --noEmit all pass"
       ],
       "priority": 6,
-      "status": "open",
+      "status": "in_progress",
       "dependsOn": [
         "US-005"
       ],
-      "notes": "shadowIds is the set of instinct IDs already flagged as skill-shadowed by US-005, passed from generateEvolveSuggestions to suppress overlapping promotion suggestions."
+      "notes": "shadowIds is the set of instinct IDs already flagged as skill-shadowed by US-005, passed from generateEvolveSuggestions to suppress overlapping promotion suggestions.",
+      "startedAt": "2026-03-27T11:00:40.554Z",
+      "updatedAt": "2026-03-27T11:00:40.554Z",
+      "completedAt": null
     }
   ]
 }

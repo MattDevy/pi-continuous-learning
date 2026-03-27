@@ -12,6 +12,8 @@ import {
   AGENTS_MD_PROJECT_ADDITION_THRESHOLD,
   AGENTS_MD_GLOBAL_ADDITION_THRESHOLD,
   SKILL_SHADOW_TOKEN_THRESHOLD,
+  SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD,
+  SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD,
   COMMAND_TRIGGER_KEYWORDS,
   tokenizeText,
   triggerSimilarity,
@@ -22,10 +24,12 @@ import {
   findAgentsMdOverlaps,
   findAgentsMdAdditions,
   findSkillShadows,
+  findSkillPromotionCandidates,
   generateEvolveSuggestions,
   formatEvolveSuggestions,
   loadInstinctsForEvolve,
   handleInstinctEvolve,
+  type SkillPromotionSuggestion,
 } from "./instinct-evolve.js";
 import type { InstalledSkill } from "./types.js";
 import { ensureStorageLayout } from "./storage.js";
@@ -1244,5 +1248,130 @@ describe("formatEvolveSuggestions - skill-shadow section", () => {
     const output = formatEvolveSuggestions(suggestions);
     expect(output).toContain("when merging branches");
     expect(output).toContain("git-workflow");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateEvolveSuggestions - skill-promotion threading
+// ---------------------------------------------------------------------------
+
+describe("generateEvolveSuggestions - skill-promotion threading", () => {
+  it("includes skill-promotion suggestions for high-confidence instincts in known domains", () => {
+    const instinct = makeInstinct({
+      id: "promo-1",
+      domain: "git",
+      confidence: SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD,
+      scope: "project",
+    });
+    const result = generateEvolveSuggestions([instinct], []);
+    const promotions = result.filter((s) => s.type === "skill-promotion");
+    expect(promotions).toHaveLength(1);
+  });
+
+  it("suppresses skill-promotion for instincts that are skill-shadowed", () => {
+    const instinct = makeInstinct({
+      id: "promo-shadow",
+      domain: "git",
+      confidence: 0.95,
+      trigger: "git version control workflow",
+    });
+    const gitSkill = { name: "git-workflow", description: "git version control" };
+    // installedSkills triggers shadow detection → suppresses promotion
+    const result = generateEvolveSuggestions([instinct], [], undefined, undefined, [gitSkill]);
+    const promotions = result.filter((s) => s.type === "skill-promotion");
+    expect(promotions).toHaveLength(0);
+  });
+
+  it("omits skill-promotion section when no qualifying instincts", () => {
+    const instinct = makeInstinct({
+      id: "low-conf",
+      domain: "git",
+      confidence: 0.4,
+    });
+    const result = generateEvolveSuggestions([instinct], []);
+    const promotions = result.filter((s) => s.type === "skill-promotion");
+    expect(promotions).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatEvolveSuggestions - skill-promotion section
+// ---------------------------------------------------------------------------
+
+describe("formatEvolveSuggestions - skill-promotion section", () => {
+  it("renders Skill Promotion Candidates section when promotions present", () => {
+    const instinct = makeInstinct({
+      id: "promo-1",
+      domain: "testing",
+      confidence: 0.85,
+    });
+    const suggestions: SkillPromotionSuggestion[] = [
+      {
+        type: "skill-promotion",
+        instincts: [instinct],
+        reason: 'High-confidence instinct in domain "testing" is a candidate',
+        domain: "testing",
+      },
+    ];
+    const output = formatEvolveSuggestions(suggestions);
+    expect(output).toContain("Skill Promotion Candidates");
+    expect(output).toContain("promo-1");
+    expect(output).toContain("0.85");
+    expect(output).toContain("testing");
+    expect(output).toContain("No skill file is written");
+  });
+
+  it("omits section when no skill-promotion suggestions", () => {
+    const instinct = makeInstinct({ trigger: "always run tests before pushing" });
+    const suggestions = findCommandCandidates([instinct]);
+    const output = formatEvolveSuggestions(suggestions);
+    expect(output).not.toContain("Skill Promotion Candidates");
+  });
+
+  it("renders cluster with multiple instincts", () => {
+    const a = makeInstinct({ id: "cluster-a", domain: "git", confidence: 0.80 });
+    const b = makeInstinct({ id: "cluster-b", domain: "git", confidence: 0.75 });
+    const suggestions: SkillPromotionSuggestion[] = [
+      {
+        type: "skill-promotion",
+        instincts: [a, b],
+        reason: 'Cluster of 2 instincts in domain "git" is cohesive',
+        domain: "git",
+      },
+    ];
+    const output = formatEvolveSuggestions(suggestions);
+    expect(output).toContain("cluster-a");
+    expect(output).toContain("cluster-b");
+    expect(output).toContain("0.80");
+    expect(output).toContain("0.75");
+  });
+
+  it("includes reason text in output", () => {
+    const instinct = makeInstinct({ id: "promo-1", domain: "debugging", confidence: 0.9 });
+    const suggestions: SkillPromotionSuggestion[] = [
+      {
+        type: "skill-promotion",
+        instincts: [instinct],
+        reason: 'High-confidence instinct in domain "debugging" (error analysis)',
+        domain: "debugging",
+      },
+    ];
+    const output = formatEvolveSuggestions(suggestions);
+    expect(output).toContain("error analysis");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// findSkillPromotionCandidates - re-exported from instinct-evolve.js
+// ---------------------------------------------------------------------------
+
+describe("findSkillPromotionCandidates re-export", () => {
+  it("is accessible from instinct-evolve.js", () => {
+    expect(typeof findSkillPromotionCandidates).toBe("function");
+  });
+
+  it("constants are accessible from instinct-evolve.js", () => {
+    expect(SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD).toBe(0.8);
+    expect(SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD).toBe(0.7);
   });
 });

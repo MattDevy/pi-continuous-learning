@@ -20,6 +20,7 @@ import {
   type AgentsMdOverlapSuggestion,
   type AgentsMdAdditionSuggestion,
   type SkillShadowSuggestion,
+  type SkillPromotionSuggestion,
   type EvolveSuggestion,
 } from "./instinct-evolve-generators.js";
 
@@ -44,6 +45,9 @@ export {
   findAgentsMdOverlaps,
   findAgentsMdAdditions,
   findSkillShadows,
+  findSkillPromotionCandidates,
+  SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD,
+  SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD,
   generateEvolveSuggestions,
   loadInstinctsForEvolve,
   type MergeSuggestion,
@@ -52,6 +56,7 @@ export {
   type AgentsMdOverlapSuggestion,
   type AgentsMdAdditionSuggestion,
   type SkillShadowSuggestion,
+  type SkillPromotionSuggestion,
   type EvolveSuggestion,
 } from "./instinct-evolve-generators.js";
 
@@ -77,6 +82,9 @@ export function formatEvolveSuggestions(suggestions: EvolveSuggestion[]): string
   );
   const skillShadows = suggestions.filter(
     (s): s is SkillShadowSuggestion => s.type === "skill-shadow"
+  );
+  const skillPromotions = suggestions.filter(
+    (s): s is SkillPromotionSuggestion => s.type === "skill-promotion"
   );
   const projectAdditions = suggestions.filter(
     (s): s is AgentsMdAdditionSuggestion =>
@@ -168,6 +176,22 @@ export function formatEvolveSuggestions(suggestions: EvolveSuggestion[]): string
     for (const s of globalAdditions) {
       lines.push(`  * [${s.instinct.confidence.toFixed(2)}] ${s.instinct.id}`);
       lines.push(`    Proposed bullet: ${s.proposedBullet}`);
+      lines.push("");
+    }
+  }
+
+  if (skillPromotions.length > 0) {
+    lines.push("## Skill Promotion Candidates");
+    lines.push("Instincts ready to be formalized into a Pi skill file:");
+    lines.push("(No skill file is written - this is informational only)");
+    lines.push("");
+    for (const s of skillPromotions) {
+      const ids = s.instincts.map((i) => i.id).join(", ");
+      const scores = s.instincts.map((i) => i.confidence.toFixed(2)).join(", ");
+      lines.push(`  * Domain: ${s.domain}`);
+      lines.push(`    IDs: ${ids}`);
+      lines.push(`    Confidence: ${scores}`);
+      lines.push(`    ${s.reason}`);
       lines.push("");
     }
   }

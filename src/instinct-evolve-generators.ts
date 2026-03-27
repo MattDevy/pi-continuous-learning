@@ -12,8 +12,20 @@ import {
   findSkillShadows,
   type SkillShadowSuggestion,
 } from "./instinct-skill-shadows.js";
+import {
+  SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD,
+  SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD,
+  findSkillPromotionCandidates,
+  type SkillPromotionSuggestion,
+} from "./instinct-skill-promotions.js";
 
 export { SKILL_SHADOW_TOKEN_THRESHOLD, findSkillShadows, type SkillShadowSuggestion };
+export {
+  SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD,
+  SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD,
+  findSkillPromotionCandidates,
+  type SkillPromotionSuggestion,
+};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -91,7 +103,8 @@ export type EvolveSuggestion =
   | PromotionSuggestion
   | AgentsMdOverlapSuggestion
   | AgentsMdAdditionSuggestion
-  | SkillShadowSuggestion;
+  | SkillShadowSuggestion
+  | SkillPromotionSuggestion;
 
 // ---------------------------------------------------------------------------
 // Tokenization re-export (canonical: instinct-text-utils.ts)
@@ -431,15 +444,20 @@ export function generateEvolveSuggestions(
     ...findAgentsMdAdditions(allInstincts, overlapIds, "global"),
   ];
 
+  const mergeSuggestions = findMergeCandidates(allInstincts);
   const skillShadows = findSkillShadows(allInstincts, installedSkills ?? []);
+  const shadowIds = new Set(skillShadows.map((s) => s.instinct.id));
+  const mergeClusters = mergeSuggestions.map((s) => s.instincts);
+  const skillPromotions = findSkillPromotionCandidates(allInstincts, mergeClusters, shadowIds);
 
   return [
-    ...findMergeCandidates(allInstincts),
+    ...mergeSuggestions,
     ...findCommandCandidates(allInstincts),
     ...findPromotionCandidates(projectInstincts, globalIds),
     ...overlapSuggestions,
     ...additionSuggestions,
     ...skillShadows,
+    ...skillPromotions,
   ];
 }
 
