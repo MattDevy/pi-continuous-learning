@@ -22,6 +22,7 @@ import {
 } from "../storage.js";
 import { countObservations } from "../observations.js";
 import { runDecayPass } from "../instinct-decay.js";
+import { runCleanupPass } from "../instinct-cleanup.js";
 import { tailObservationsSince } from "../prompts/analyzer-user.js";
 import { buildSingleShotSystemPrompt } from "../prompts/analyzer-system-single-shot.js";
 import { buildSingleShotUserPrompt } from "../prompts/analyzer-user-single-shot.js";
@@ -186,6 +187,7 @@ async function analyzeProject(
   const startTime = Date.now();
   logger.projectStart(project.id, project.name, rawLineCount, obsCount);
 
+  runCleanupPass(project.id, config, baseDir);
   runDecayPass(project.id, baseDir);
 
   // Load current instincts inline - no tool calls needed
@@ -243,6 +245,10 @@ async function analyzeProject(
     const result = await runSingleShot(context, model, apiKey, abortController.signal);
     singleShotMessage = result.message;
 
+    // Enforce creation rate limit: only the first N create actions per run are applied.
+    const maxNewInstincts = config.max_new_instincts_per_run ?? DEFAULT_CONFIG.max_new_instincts_per_run;
+    let createsRemaining = maxNewInstincts;
+
     for (const change of result.changes) {
       if (change.action === "delete") {
         const id = change.id;
@@ -253,20 +259,25 @@ async function analyzeProject(
           unlinkSync(filePath);
           instinctCounts.deleted++;
         }
-      } else {
-        // create or update
+      } else if (change.action === "create") {
+        if (createsRemaining <= 0) continue; // rate limit reached
         const existing = allInstincts.find((i) => i.id === change.instinct?.id) ?? null;
         const instinct = buildInstinctFromChange(change, existing, project.id);
         if (!instinct) continue;
 
         const dir = instinct.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
         saveInstinct(instinct, dir);
+        instinctCounts.created++;
+        createsRemaining--;
+      } else {
+        // update
+        const existing = allInstincts.find((i) => i.id === change.instinct?.id) ?? null;
+        const instinct = buildInstinctFromChange(change, existing, project.id);
+        if (!instinct) continue;
 
-        if (change.action === "create") {
-          instinctCounts.created++;
-        } else {
-          instinctCounts.updated++;
-        }
+        const dir = instinct.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
+        saveInstinct(instinct, dir);
+        instinctCounts.updated++;
       }
     }
   } finally {

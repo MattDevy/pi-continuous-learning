@@ -45,7 +45,13 @@ describe("loadConfig", () => {
 
     const config = loadConfig();
 
-    expect(config).toEqual(overrides);
+    // Provided overrides win; new volume-control fields fall back to defaults
+    expect(config).toMatchObject(overrides);
+    expect(config.max_total_instincts_per_project).toBe(DEFAULT_CONFIG.max_total_instincts_per_project);
+    expect(config.max_total_instincts_global).toBe(DEFAULT_CONFIG.max_total_instincts_global);
+    expect(config.max_new_instincts_per_run).toBe(DEFAULT_CONFIG.max_new_instincts_per_run);
+    expect(config.flagged_cleanup_days).toBe(DEFAULT_CONFIG.flagged_cleanup_days);
+    expect(config.instinct_ttl_days).toBe(DEFAULT_CONFIG.instinct_ttl_days);
   });
 
   it("merges partial overrides with defaults (overrides win)", () => {
@@ -84,6 +90,14 @@ describe("loadConfig", () => {
     expect(DEFAULT_CONFIG.max_instincts).toBe(20);
     expect(DEFAULT_CONFIG.model).toBe("claude-haiku-4-5");
     expect(DEFAULT_CONFIG.timeout_seconds).toBe(120);
+  });
+
+  it("has correct volume-control default values", () => {
+    expect(DEFAULT_CONFIG.max_total_instincts_per_project).toBe(30);
+    expect(DEFAULT_CONFIG.max_total_instincts_global).toBe(20);
+    expect(DEFAULT_CONFIG.max_new_instincts_per_run).toBe(3);
+    expect(DEFAULT_CONFIG.flagged_cleanup_days).toBe(7);
+    expect(DEFAULT_CONFIG.instinct_ttl_days).toBe(28);
   });
 
   it("exports CONFIG_PATH pointing to ~/.pi/continuous-learning/config.json", () => {

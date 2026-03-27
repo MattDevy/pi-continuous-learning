@@ -156,10 +156,19 @@ describe("types exports", () => {
       active_hours_start: 8,
       active_hours_end: 23,
       max_idle_seconds: 1800,
+      max_total_instincts_per_project: 30,
+      max_total_instincts_global: 20,
+      max_new_instincts_per_run: 3,
+      flagged_cleanup_days: 7,
+      instinct_ttl_days: 28,
     };
     expect(config.run_interval_minutes).toBe(5);
     expect(config.model).toBe("claude-haiku-4-5");
     expect(config.active_hours_start).toBe(8);
     expect(config.max_idle_seconds).toBe(1800);
+    expect(config.max_total_instincts_per_project).toBe(30);
+    expect(config.max_new_instincts_per_run).toBe(3);
+    expect(config.flagged_cleanup_days).toBe(7);
+    expect(config.instinct_ttl_days).toBe(28);
   });
 });

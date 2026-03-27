@@ -77,6 +77,12 @@ export const DEFAULT_CONFIG: Config = {
   active_hours_start: 8,
   active_hours_end: 23,
   max_idle_seconds: 1800,
+  // Volume control defaults
+  max_total_instincts_per_project: 30,
+  max_total_instincts_global: 20,
+  max_new_instincts_per_run: 3,
+  flagged_cleanup_days: 7,
+  instinct_ttl_days: 28,
 };
 
 // ---------------------------------------------------------------------------
@@ -96,6 +102,12 @@ const PartialConfigSchema = Type.Partial(
     active_hours_end: Type.Number(),
     max_idle_seconds: Type.Number(),
     log_path: Type.String(),
+    // Volume control
+    max_total_instincts_per_project: Type.Number(),
+    max_total_instincts_global: Type.Number(),
+    max_new_instincts_per_run: Type.Number(),
+    flagged_cleanup_days: Type.Number(),
+    instinct_ttl_days: Type.Number(),
   })
 );
 
