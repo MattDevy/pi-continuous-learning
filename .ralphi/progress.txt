@@ -1,5 +1,8 @@
 ## Codebase Patterns
 - Add reusable, project-wide implementation patterns here.
+- agents-md.ts is the canonical entry point for reading AGENTS.md files; always use readAgentsMd() - never read directly - to get null-safe behavior.
+- buildAnalyzerUserPrompt accepts an optional AnalyzerUserPromptOptions object; callers that don't need AGENTS.md/skills can omit it entirely (defaults to empty).
+- System prompt sections are built by private helper functions (buildXSection()) and assembled in buildAnalyzerSystemPrompt(); add new sections by adding a helper and appending to the sections array.
 ---
 
 ## PRD Run Context
@@ -30,4 +33,36 @@ Corrective Plan: N/A
   - MergeSuggestion now has recommendation + keepId; formatEvolveSuggestions renders both
   - Two-pass dedup: trigger first, then action; track triggerPairKeys (Set<string>) to prevent duplicates in pass 2
   - findKeeper() selects highest-confidence instinct; tie-breaks by id < id alphabetically (first alphabetically wins)
+---
+
+## 2026-03-27 - US-002
+Session: iter-1c875002
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Created src/agents-md.ts with readAgentsMd(filePath): string | null
+  - Returns file content or null if file missing or unreadable
+- Added InstalledSkill interface { name: string; description: string } to types.ts
+- Extended buildAnalyzerUserPrompt with optional AnalyzerUserPromptOptions:
+  - agentsMdProject?: string | null - appended under '## Existing Guidelines / ### Project AGENTS.md'
+  - agentsMdGlobal?: string | null - appended under '## Existing Guidelines / ### Global AGENTS.md'
+  - installedSkills?: InstalledSkill[] - appended under '## Installed Skills' (name + description bullets)
+  - Section omitted entirely when params are null/empty (backward compatible)
+- Added two new sections to buildAnalyzerSystemPrompt():
+  - 'Avoid Duplicating Guidelines' - instructs Haiku to skip instincts already in AGENTS.md
+  - 'Avoid Duplicating Installed Skills' - instructs Haiku to skip instincts covered by named skills
+- Files changed:
+  - src/types.ts (InstalledSkill interface)
+  - src/agents-md.ts (new, 22 lines)
+  - src/agents-md.test.ts (new, 5 tests)
+  - src/prompts/analyzer-user.ts (AnalyzerUserPromptOptions + updated buildAnalyzerUserPrompt)
+  - src/prompts/analyzer-user.test.ts (+14 tests for optional params)
+  - src/prompts/analyzer-system.ts (2 new section builder functions)
+  - src/prompts/analyzer-system.test.ts (+6 tests for new sections)
+- **Learnings for future iterations:**
+  - AnalyzerUserPromptOptions uses default parameter `= {}` so callers don't need to pass anything
+  - The '## Existing Guidelines' block only appears when at least one of agentsMdProject/agentsMdGlobal is non-null
+  - InstalledSkill is in types.ts - US-003, US-004, US-005 all depend on this interface
+  - US-003 depends on US-002; it uses readAgentsMd() and adds findAgentsMdOverlaps() to the evolve flow
 ---

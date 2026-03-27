@@ -42,12 +42,12 @@
         "npx vitest run && npx eslint src/ && npx tsc --noEmit all pass"
       ],
       "priority": 2,
-      "status": "in_progress",
+      "status": "done",
       "dependsOn": [],
       "notes": "InstalledSkill type added here (FR-10) since it is also needed by US-005 and US-001. No changes to index.ts or instinct-evolve in this story.",
       "startedAt": "2026-03-27T10:21:10.801Z",
-      "updatedAt": "2026-03-27T10:21:10.801Z",
-      "completedAt": null
+      "updatedAt": "2026-03-27T10:24:30.000Z",
+      "completedAt": "2026-03-27T10:24:30.000Z"
     },
     {
       "id": "US-003",
