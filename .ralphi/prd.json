@@ -149,8 +149,8 @@
       ],
       "notes": "shadowIds is the set of instinct IDs already flagged as skill-shadowed by US-005, passed from generateEvolveSuggestions to suppress overlapping promotion suggestions.",
       "startedAt": "2026-03-27T11:00:40.554Z",
-      "updatedAt": "2026-03-27T11:09:30.000Z",
-      "completedAt": "2026-03-27T11:09:30.000Z"
+      "updatedAt": "2026-03-27T11:10:47.305Z",
+      "completedAt": "2026-03-27T11:10:47.305Z"
     }
   ]
 }
