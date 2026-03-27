@@ -1,253 +1,67 @@
 /**
  * /instinct-evolve command for pi-continuous-learning.
- * Analyzes instincts and suggests clustering, merging, and promotion
- * opportunities. Informational only - does not modify any instincts.
+ * Contains the command handler (handleInstinctEvolve) and formatter
+ * (formatEvolveSuggestions). Generator functions live in
+ * instinct-evolve-generators.ts.
  */
 
 import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import type { Instinct } from "./types.js";
-import { loadProjectInstincts, loadGlobalInstincts } from "./instinct-store.js";
+import type { InstalledSkill } from "./types.js";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { getBaseDir } from "./storage.js";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+import { readAgentsMd } from "./agents-md.js";
+import {
+  loadInstinctsForEvolve,
+  generateEvolveSuggestions,
+  type MergeSuggestion,
+  type CommandSuggestion,
+  type PromotionSuggestion,
+  type AgentsMdOverlapSuggestion,
+  type AgentsMdAdditionSuggestion,
+  type SkillShadowSuggestion,
+  type SkillPromotionSuggestion,
+  type EvolveSuggestion,
+} from "./instinct-evolve-generators.js";
 
 export const COMMAND_NAME = "instinct-evolve";
 
-/** Jaccard similarity threshold to suggest merging two instincts. */
-export const MERGE_SIMILARITY_THRESHOLD = 0.3;
-
-/** Minimum project-instinct confidence to suggest global promotion. */
-export const PROMOTION_CONFIDENCE_THRESHOLD = 0.7;
-
-/** Words excluded from trigger tokenization (noise words). */
-const STOP_WORDS = new Set([
-  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
-  "of", "with", "is", "are", "was", "were", "be", "been", "i", "you",
-  "we", "it", "this", "that", "when", "if", "by", "as", "use",
-]);
-
-/** Trigger keywords indicating a repeatable workflow. */
-export const COMMAND_TRIGGER_KEYWORDS = [
-  "always", "every time", "whenever", "each time",
-  "before", "after", "run", "execute",
-];
-
-// ---------------------------------------------------------------------------
-// Suggestion types
-// ---------------------------------------------------------------------------
-
-export interface MergeSuggestion {
-  type: "merge";
-  instincts: Instinct[];
-  reason: string;
-}
-
-export interface CommandSuggestion {
-  type: "command";
-  instinct: Instinct;
-  reason: string;
-}
-
-export interface PromotionSuggestion {
-  type: "promotion";
-  instinct: Instinct;
-  reason: string;
-}
-
-export type EvolveSuggestion =
-  | MergeSuggestion
-  | CommandSuggestion
-  | PromotionSuggestion;
+// Re-export everything from generators so callers can import from one place.
+export {
+  MERGE_SIMILARITY_THRESHOLD,
+  ACTION_SIMILARITY_THRESHOLD,
+  PROMOTION_CONFIDENCE_THRESHOLD,
+  AGENTS_MD_OVERLAP_THRESHOLD,
+  AGENTS_MD_PROJECT_ADDITION_THRESHOLD,
+  AGENTS_MD_GLOBAL_ADDITION_THRESHOLD,
+  SKILL_SHADOW_TOKEN_THRESHOLD,
+  COMMAND_TRIGGER_KEYWORDS,
+  tokenizeText,
+  triggerSimilarity,
+  actionSimilarity,
+  findMergeCandidates,
+  findCommandCandidates,
+  findPromotionCandidates,
+  findAgentsMdOverlaps,
+  findAgentsMdAdditions,
+  findSkillShadows,
+  findSkillPromotionCandidates,
+  SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD,
+  SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD,
+  generateEvolveSuggestions,
+  loadInstinctsForEvolve,
+  type MergeSuggestion,
+  type CommandSuggestion,
+  type PromotionSuggestion,
+  type AgentsMdOverlapSuggestion,
+  type AgentsMdAdditionSuggestion,
+  type SkillShadowSuggestion,
+  type SkillPromotionSuggestion,
+  type EvolveSuggestion,
+} from "./instinct-evolve-generators.js";
 
 // ---------------------------------------------------------------------------
-// Trigger tokenization and similarity
-// ---------------------------------------------------------------------------
-
-/**
- * Tokenizes a trigger string into significant lowercase words.
- * Strips punctuation, filters stop words, requires length >= 3.
- */
-export function tokenizeTrigger(trigger: string): Set<string> {
-  const words = trigger
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
-  return new Set(words);
-}
-
-/**
- * Computes Jaccard similarity between two instincts' trigger token sets.
- * Returns a value in [0, 1]; returns 0 when both sets are empty.
- */
-export function triggerSimilarity(a: Instinct, b: Instinct): number {
-  const tokensA = tokenizeTrigger(a.trigger);
-  const tokensB = tokenizeTrigger(b.trigger);
-  if (tokensA.size === 0 && tokensB.size === 0) return 0;
-
-  const intersection = [...tokensA].filter((t) => tokensB.has(t));
-  const union = new Set([...tokensA, ...tokensB]);
-  return intersection.length / union.size;
-}
-
-// ---------------------------------------------------------------------------
-// Clustering helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Groups instinct pairs into connected components (clusters).
- * Uses BFS to find all instincts reachable from each starting node.
- */
-function clusterPairs(
-  pairs: [Instinct, Instinct][],
-  allInGroup: Instinct[]
-): Instinct[][] {
-  const adj = new Map<string, Set<string>>();
-  for (const [a, b] of pairs) {
-    const aAdj = adj.get(a.id) ?? new Set<string>();
-    aAdj.add(b.id);
-    adj.set(a.id, aAdj);
-    const bAdj = adj.get(b.id) ?? new Set<string>();
-    bAdj.add(a.id);
-    adj.set(b.id, bAdj);
-  }
-
-  const idMap = new Map<string, Instinct>(allInGroup.map((i) => [i.id, i]));
-  const visited = new Set<string>();
-  const clusters: Instinct[][] = [];
-
-  for (const [startId] of adj) {
-    if (visited.has(startId)) continue;
-
-    const cluster: Instinct[] = [];
-    const queue = [startId];
-    while (queue.length > 0) {
-      const id = queue.shift()!;
-      if (visited.has(id)) continue;
-      visited.add(id);
-      const inst = idMap.get(id);
-      if (inst) cluster.push(inst);
-      for (const neighbor of adj.get(id) ?? []) {
-        if (!visited.has(neighbor)) queue.push(neighbor);
-      }
-    }
-
-    if (cluster.length >= 2) clusters.push(cluster);
-  }
-
-  return clusters;
-}
-
-// ---------------------------------------------------------------------------
-// Suggestion generators
-// ---------------------------------------------------------------------------
-
-/**
- * Finds pairs of instincts (within the same domain) whose triggers are
- * similar enough to suggest merging. Groups overlapping pairs into clusters.
- */
-export function findMergeCandidates(instincts: Instinct[]): MergeSuggestion[] {
-  const byDomain = new Map<string, Instinct[]>();
-  for (const instinct of instincts) {
-    const domain = instinct.domain || "uncategorized";
-    byDomain.set(domain, [...(byDomain.get(domain) ?? []), instinct]);
-  }
-
-  const suggestions: MergeSuggestion[] = [];
-
-  for (const [domain, group] of byDomain) {
-    if (group.length < 2) continue;
-
-    const pairs: [Instinct, Instinct][] = [];
-    for (let i = 0; i < group.length; i++) {
-      for (let j = i + 1; j < group.length; j++) {
-        const a = group[i];
-        const b = group[j];
-        if (!a || !b) continue;
-        if (triggerSimilarity(a, b) >= MERGE_SIMILARITY_THRESHOLD) {
-          pairs.push([a, b]);
-        }
-      }
-    }
-
-    if (pairs.length === 0) continue;
-
-    const clusters = clusterPairs(pairs, group);
-    for (const cluster of clusters) {
-      suggestions.push({
-        type: "merge",
-        instincts: cluster,
-        reason: `${cluster.length} instincts in domain "${domain}" have similar triggers and may be candidates for merging`,
-      });
-    }
-  }
-
-  return suggestions;
-}
-
-/**
- * Finds instincts whose trigger suggests they could become a slash command.
- */
-export function findCommandCandidates(
-  instincts: Instinct[]
-): CommandSuggestion[] {
-  return instincts
-    .filter((instinct) => {
-      const trigger = instinct.trigger.toLowerCase();
-      return (
-        instinct.domain === "workflow" ||
-        COMMAND_TRIGGER_KEYWORDS.some((kw) => trigger.includes(kw))
-      );
-    })
-    .map((instinct) => ({
-      type: "command" as const,
-      instinct,
-      reason: `Trigger "${instinct.trigger}" suggests a repeatable workflow that could become a slash command`,
-    }));
-}
-
-/**
- * Finds project-scoped instincts with confidence >= threshold not already global.
- */
-export function findPromotionCandidates(
-  instincts: Instinct[],
-  globalInstinctIds: Set<string>
-): PromotionSuggestion[] {
-  return instincts
-    .filter(
-      (i) =>
-        i.scope === "project" &&
-        i.confidence >= PROMOTION_CONFIDENCE_THRESHOLD &&
-        !globalInstinctIds.has(i.id)
-    )
-    .map((instinct) => ({
-      type: "promotion" as const,
-      instinct,
-      reason: `Project instinct has confidence ${instinct.confidence.toFixed(2)} (>= ${PROMOTION_CONFIDENCE_THRESHOLD}) and may be ready for global promotion`,
-    }));
-}
-
-/**
- * Generates all evolution suggestions from project and global instinct sets.
- */
-export function generateEvolveSuggestions(
-  projectInstincts: Instinct[],
-  globalInstincts: Instinct[]
-): EvolveSuggestion[] {
-  const allInstincts = [...projectInstincts, ...globalInstincts];
-  const globalIds = new Set(globalInstincts.map((i) => i.id));
-
-  return [
-    ...findMergeCandidates(allInstincts),
-    ...findCommandCandidates(allInstincts),
-    ...findPromotionCandidates(projectInstincts, globalIds),
-  ];
-}
-
-// ---------------------------------------------------------------------------
-// Formatting
+// Formatter
 // ---------------------------------------------------------------------------
 
 /**
@@ -260,22 +74,34 @@ export function formatEvolveSuggestions(suggestions: EvolveSuggestion[]): string
 
   const lines: string[] = ["=== Instinct Evolution Suggestions ===", ""];
 
-  const merges = suggestions.filter(
-    (s): s is MergeSuggestion => s.type === "merge"
+  const merges = suggestions.filter((s): s is MergeSuggestion => s.type === "merge");
+  const commands = suggestions.filter((s): s is CommandSuggestion => s.type === "command");
+  const promotions = suggestions.filter((s): s is PromotionSuggestion => s.type === "promotion");
+  const overlaps = suggestions.filter(
+    (s): s is AgentsMdOverlapSuggestion => s.type === "agents-md-overlap"
   );
-  const commands = suggestions.filter(
-    (s): s is CommandSuggestion => s.type === "command"
+  const skillShadows = suggestions.filter(
+    (s): s is SkillShadowSuggestion => s.type === "skill-shadow"
   );
-  const promotions = suggestions.filter(
-    (s): s is PromotionSuggestion => s.type === "promotion"
+  const skillPromotions = suggestions.filter(
+    (s): s is SkillPromotionSuggestion => s.type === "skill-promotion"
+  );
+  const projectAdditions = suggestions.filter(
+    (s): s is AgentsMdAdditionSuggestion =>
+      s.type === "agents-md-addition" && s.scope === "project"
+  );
+  const globalAdditions = suggestions.filter(
+    (s): s is AgentsMdAdditionSuggestion =>
+      s.type === "agents-md-addition" && s.scope === "global"
   );
 
   if (merges.length > 0) {
     lines.push("## Merge Candidates");
-    lines.push("Related instincts with similar triggers that could be consolidated:");
+    lines.push("Related instincts with similar triggers or actions that could be consolidated:");
     lines.push("");
     for (const s of merges) {
       lines.push(`  * ${s.reason}`);
+      lines.push(`    Recommendation: ${s.recommendation} (keep: ${s.keepId})`);
       for (const i of s.instincts) {
         lines.push(`    - [${i.confidence.toFixed(2)}] ${i.id}: ${i.trigger}`);
       }
@@ -306,6 +132,70 @@ export function formatEvolveSuggestions(suggestions: EvolveSuggestion[]): string
     }
   }
 
+  if (overlaps.length > 0) {
+    lines.push("## Duplicates AGENTS.md");
+    lines.push("Instincts whose content overlaps with AGENTS.md guidelines:");
+    lines.push("");
+    for (const s of overlaps) {
+      lines.push(`  * [${s.instinct.confidence.toFixed(2)}] ${s.instinct.id}`);
+      lines.push(`    Trigger: ${s.instinct.trigger}`);
+      lines.push(`    Excerpt: "${s.matchingExcerpt}"`);
+      lines.push("");
+    }
+  }
+
+  if (projectAdditions.length > 0) {
+    lines.push("## Suggested Project AGENTS.md Additions");
+    lines.push("High-confidence instincts ready to become permanent project guidelines:");
+    lines.push("(Edit AGENTS.md manually to add these - no file is written automatically)");
+    lines.push("");
+    for (const s of projectAdditions) {
+      lines.push(`  * [${s.instinct.confidence.toFixed(2)}] ${s.instinct.id}`);
+      lines.push(`    Proposed bullet: ${s.proposedBullet}`);
+      lines.push("");
+    }
+  }
+
+  if (skillShadows.length > 0) {
+    lines.push("## Shadowed by Installed Skill");
+    lines.push("Instincts already covered by an installed Pi skill:");
+    lines.push("");
+    for (const s of skillShadows) {
+      lines.push(`  * [${s.instinct.confidence.toFixed(2)}] ${s.instinct.id}`);
+      lines.push(`    Trigger: ${s.instinct.trigger}`);
+      lines.push(`    Shadowed by skill: ${s.skillName}`);
+      lines.push("");
+    }
+  }
+
+  if (globalAdditions.length > 0) {
+    lines.push("## Suggested Global AGENTS.md Additions");
+    lines.push("High-confidence global instincts ready to become permanent global guidelines:");
+    lines.push("(Edit ~/.pi/agent/AGENTS.md manually to add these - no file is written automatically)");
+    lines.push("");
+    for (const s of globalAdditions) {
+      lines.push(`  * [${s.instinct.confidence.toFixed(2)}] ${s.instinct.id}`);
+      lines.push(`    Proposed bullet: ${s.proposedBullet}`);
+      lines.push("");
+    }
+  }
+
+  if (skillPromotions.length > 0) {
+    lines.push("## Skill Promotion Candidates");
+    lines.push("Instincts ready to be formalized into a Pi skill file:");
+    lines.push("(No skill file is written - this is informational only)");
+    lines.push("");
+    for (const s of skillPromotions) {
+      const ids = s.instincts.map((i) => i.id).join(", ");
+      const scores = s.instincts.map((i) => i.confidence.toFixed(2)).join(", ");
+      lines.push(`  * Domain: ${s.domain}`);
+      lines.push(`    IDs: ${ids}`);
+      lines.push(`    Confidence: ${scores}`);
+      lines.push(`    ${s.reason}`);
+      lines.push("");
+    }
+  }
+
   const total = suggestions.length;
   lines.push(
     `Total: ${total} suggestion${total !== 1 ? "s" : ""} (informational only - no changes applied)`
@@ -315,25 +205,7 @@ export function formatEvolveSuggestions(suggestions: EvolveSuggestion[]): string
 }
 
 // ---------------------------------------------------------------------------
-// loadInstinctsForEvolve
-// ---------------------------------------------------------------------------
-
-/**
- * Loads project and global instincts for evolution analysis.
- * Includes all instincts regardless of confidence (to surface improvement opportunities).
- */
-export function loadInstinctsForEvolve(
-  projectId?: string | null,
-  baseDir?: string
-): { projectInstincts: Instinct[]; globalInstincts: Instinct[] } {
-  const projectInstincts =
-    projectId != null ? loadProjectInstincts(projectId, baseDir) : [];
-  const globalInstincts = loadGlobalInstincts(baseDir);
-  return { projectInstincts, globalInstincts };
-}
-
-// ---------------------------------------------------------------------------
-// handleInstinctEvolve
+// Command handler
 // ---------------------------------------------------------------------------
 
 /**
@@ -345,14 +217,27 @@ export async function handleInstinctEvolve(
   _args: string,
   ctx: ExtensionCommandContext,
   projectId?: string | null,
-  baseDir?: string
+  baseDir?: string,
+  projectRoot?: string | null,
+  installedSkills?: InstalledSkill[]
 ): Promise<void> {
   const effectiveBase = baseDir ?? getBaseDir();
   const { projectInstincts, globalInstincts } = loadInstinctsForEvolve(
     projectId,
     effectiveBase
   );
-  const suggestions = generateEvolveSuggestions(projectInstincts, globalInstincts);
+
+  const agentsMdProject =
+    projectRoot != null ? readAgentsMd(join(projectRoot, "AGENTS.md")) : null;
+  const agentsMdGlobal = readAgentsMd(join(homedir(), ".pi", "agent", "AGENTS.md"));
+
+  const suggestions = generateEvolveSuggestions(
+    projectInstincts,
+    globalInstincts,
+    agentsMdProject,
+    agentsMdGlobal,
+    installedSkills
+  );
   const output = formatEvolveSuggestions(suggestions);
   ctx.ui.notify(output, "info");
 }
