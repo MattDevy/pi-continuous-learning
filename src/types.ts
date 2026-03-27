@@ -107,4 +107,10 @@ export interface Config {
   active_hours_end: number; // 0-23
   max_idle_seconds: number;
   log_path?: string; // Override analyzer log location (default: ~/.pi/continuous-learning/analyzer.log)
+  // Volume control
+  max_total_instincts_per_project: number; // hard cap per project (enforced by auto-deletion)
+  max_total_instincts_global: number; // hard cap for global instincts (enforced by auto-deletion)
+  max_new_instincts_per_run: number; // creation rate limit per analyzer run
+  flagged_cleanup_days: number; // auto-delete flagged instincts after N days
+  instinct_ttl_days: number; // auto-delete zero-confirmation instincts after N days
 }

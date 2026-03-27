@@ -75,8 +75,8 @@ describe("applyDecayToInstinct", () => {
     });
     const result = applyDecayToInstinct(instinct);
     expect(result).not.toBeNull();
-    // 2 weeks * 0.02/week = 0.04 decay; 0.7 - 0.04 = 0.66
-    expect(result!.confidence).toBeCloseTo(0.66, 2);
+    // 2 weeks * 0.05/week = 0.10 decay; 0.7 - 0.10 = 0.60
+    expect(result!.confidence).toBeCloseTo(0.60, 2);
   });
 
   it("sets updated_at to current time when a change is made", () => {
@@ -89,7 +89,7 @@ describe("applyDecayToInstinct", () => {
   });
 
   it("flags instinct for removal when confidence decays to or below 0.1", () => {
-    // 0.15 confidence, 4 weeks ago: decay = 4 * 0.02 = 0.08; 0.15 - 0.08 = 0.07 < 0.1
+    // 0.15 confidence, 4 weeks ago: decay = 4 * 0.05 = 0.20; 0.15 - 0.20 = -0.05 < 0.1
     const instinct = makeInstinct({
       confidence: 0.15,
       updated_at: daysAgo(28),
@@ -183,7 +183,8 @@ describe("applyDecayInDir", () => {
     applyDecayInDir(tmpDir);
     const reloaded = listInstincts(tmpDir);
     expect(reloaded).toHaveLength(1);
-    expect(reloaded[0]!.confidence).toBeCloseTo(0.66, 2);
+    // 2 weeks * 0.05/week = 0.10; 0.7 - 0.10 = 0.60
+    expect(reloaded[0]!.confidence).toBeCloseTo(0.60, 2);
   });
 
   it("handles mixed fresh and stale instincts correctly", () => {
@@ -224,7 +225,8 @@ describe("runDecayPass", () => {
     saveInstinct(stale, projectPersonalDir);
     runDecayPass(projectId, baseDir);
     const reloaded = listInstincts(projectPersonalDir);
-    expect(reloaded[0]!.confidence).toBeCloseTo(0.66, 2);
+    // 2 weeks * 0.05/week = 0.10; 0.7 - 0.10 = 0.60
+    expect(reloaded[0]!.confidence).toBeCloseTo(0.60, 2);
   });
 
   it("applies decay to global personal instincts", () => {
@@ -232,8 +234,8 @@ describe("runDecayPass", () => {
     saveInstinct(stale, globalPersonalDir);
     runDecayPass(undefined, baseDir);
     const reloaded = listInstincts(globalPersonalDir);
-    // 3 weeks * 0.02 = 0.06 decay; 0.8 - 0.06 = 0.74
-    expect(reloaded[0]!.confidence).toBeCloseTo(0.74, 2);
+    // 3 weeks * 0.05 = 0.15 decay; 0.8 - 0.15 = 0.65
+    expect(reloaded[0]!.confidence).toBeCloseTo(0.65, 2);
   });
 
   it("applies decay to both project and global when projectId is provided", () => {

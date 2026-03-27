@@ -26,7 +26,8 @@ const DELTA_CONTRADICTED = -0.15;
 const DELTA_INACTIVE = 0;
 
 // applyPassiveDecay
-const DECAY_PER_WEEK = 0.02;
+// Increased from 0.02 to 0.05: at 0.5 confidence, reaches 0.1 in ~8 weeks instead of 20.
+const DECAY_PER_WEEK = 0.05;
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
 // ---------------------------------------------------------------------------

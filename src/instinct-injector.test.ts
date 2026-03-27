@@ -53,6 +53,11 @@ const BASE_CONFIG: Config = {
   active_hours_start: 8,
   active_hours_end: 23,
   max_idle_seconds: 1800,
+  max_total_instincts_per_project: 30,
+  max_total_instincts_global: 20,
+  max_new_instincts_per_run: 3,
+  flagged_cleanup_days: 7,
+  instinct_ttl_days: 28,
 };
 
 const MOCK_CTX = {} as ExtensionContext;
