@@ -7,36 +7,35 @@ import {
   unlinkSync,
 } from "node:fs";
 import { join } from "node:path";
-import {
-  createAgentSession,
-  SessionManager,
-  AuthStorage,
-  ModelRegistry,
-  DefaultResourceLoader,
-} from "@mariozechner/pi-coding-agent";
+import { AuthStorage } from "@mariozechner/pi-coding-agent";
 import { getModel } from "@mariozechner/pi-ai";
 
 import { loadConfig, DEFAULT_CONFIG } from "../config.js";
-import type { ProjectEntry } from "../types.js";
+import type { InstalledSkill, ProjectEntry } from "../types.js";
 import {
   getBaseDir,
   getProjectsRegistryPath,
   getObservationsPath,
   getProjectDir,
+  getProjectInstinctsDir,
+  getGlobalInstinctsDir,
 } from "../storage.js";
 import { countObservations } from "../observations.js";
 import { runDecayPass } from "../instinct-decay.js";
-import { buildAnalyzerUserPrompt, tailObservationsSince } from "../prompts/analyzer-user.js";
-import { buildAnalyzerSystemPrompt } from "./analyze-prompt.js";
+import { tailObservationsSince } from "../prompts/analyzer-user.js";
+import { buildSingleShotSystemPrompt } from "../prompts/analyzer-system-single-shot.js";
+import { buildSingleShotUserPrompt } from "../prompts/analyzer-user-single-shot.js";
 import {
-  createInstinctListTool,
-  createInstinctReadTool,
-  createInstinctWriteTool,
-  createInstinctDeleteTool,
-} from "../instinct-tools.js";
+  runSingleShot,
+  buildInstinctFromChange,
+} from "./analyze-single-shot.js";
+import {
+  loadProjectInstincts,
+  loadGlobalInstincts,
+  saveInstinct,
+} from "../instinct-store.js";
 import { readAgentsMd } from "../agents-md.js";
 import { homedir } from "node:os";
-import type { InstalledSkill } from "../types.js";
 import { AnalyzeLogger, type ProjectRunStats, type RunSummary } from "./analyze-logger.js";
 
 // ---------------------------------------------------------------------------
@@ -59,7 +58,6 @@ function acquireLock(baseDir: string): boolean {
       const lock = JSON.parse(content) as { pid: number; started_at: string };
       const age = Date.now() - new Date(lock.started_at).getTime();
 
-      // Check if the owning process is still alive
       try {
         process.kill(lock.pid, 0); // signal 0 = existence check, no actual signal
         if (age < LOCK_STALE_MS) {
@@ -102,72 +100,6 @@ function startGlobalTimeout(timeoutMs: number, logger: AnalyzeLogger): void {
     logger.error("Global timeout reached, forcing exit");
     process.exit(2);
   }, timeoutMs).unref();
-}
-
-// ---------------------------------------------------------------------------
-// Instinct operation tracking
-// ---------------------------------------------------------------------------
-
-interface InstinctOpCounts {
-  created: number;
-  updated: number;
-  deleted: number;
-}
-
-/**
- * Wraps instinct tools to count create/update/delete operations.
- * Returns new tool instances that increment the provided counts.
- */
-function wrapInstinctToolsWithTracking(
-  projectId: string,
-  projectName: string,
-  baseDir: string,
-  counts: InstinctOpCounts
-) {
-  const writeTool = createInstinctWriteTool(projectId, projectName, baseDir);
-  const deleteTool = createInstinctDeleteTool(projectId, baseDir);
-
-  const trackedWrite = {
-    ...writeTool,
-    async execute(
-      toolCallId: string,
-      params: Parameters<typeof writeTool.execute>[1],
-      signal: AbortSignal | undefined,
-      onUpdate: unknown,
-      ctx: unknown
-    ) {
-      const result = await writeTool.execute(toolCallId, params, signal, onUpdate, ctx);
-      const details = result.details as { action?: string } | undefined;
-      if (details?.action === "created") {
-        counts.created++;
-      } else {
-        counts.updated++;
-      }
-      return result;
-    },
-  };
-
-  const trackedDelete = {
-    ...deleteTool,
-    async execute(
-      toolCallId: string,
-      params: Parameters<typeof deleteTool.execute>[1],
-      signal: AbortSignal | undefined,
-      onUpdate: unknown,
-      ctx: unknown
-    ) {
-      const result = await deleteTool.execute(toolCallId, params, signal, onUpdate, ctx);
-      counts.deleted++;
-      return result;
-    },
-  };
-
-  return {
-    listTool: createInstinctListTool(projectId, baseDir),
-    readTool: createInstinctReadTool(projectId, baseDir),
-    writeTool: trackedWrite,
-    deleteTool: trackedDelete,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -237,10 +169,13 @@ async function analyzeProject(
 
   const obsPath = getObservationsPath(project.id, baseDir);
   const sinceLineCount = meta.last_observation_line_count ?? 0;
-  const { lines: newObsLines, totalLineCount } = tailObservationsSince(obsPath, sinceLineCount);
+  const { lines: newObsLines, totalLineCount, rawLineCount } = tailObservationsSince(
+    obsPath,
+    sinceLineCount
+  );
 
   if (newObsLines.length === 0) {
-    return { ran: false, skippedReason: "no new observation lines" };
+    return { ran: false, skippedReason: "no new observation lines after preprocessing" };
   }
 
   const obsCount = countObservations(project.id, baseDir);
@@ -249,11 +184,14 @@ async function analyzeProject(
   }
 
   const startTime = Date.now();
-  logger.projectStart(project.id, project.name, newObsLines.length, obsCount);
+  logger.projectStart(project.id, project.name, rawLineCount, obsCount);
 
   runDecayPass(project.id, baseDir);
 
-  const instinctsDir = join(getProjectDir(project.id, baseDir), "instincts", "personal");
+  // Load current instincts inline - no tool calls needed
+  const projectInstincts = loadProjectInstincts(project.id, baseDir);
+  const globalInstincts = loadGlobalInstincts(baseDir);
+  const allInstincts = [...projectInstincts, ...globalInstincts];
 
   const agentsMdProject = readAgentsMd(join(project.root, "AGENTS.md"));
   const agentsMdGlobal = readAgentsMd(join(homedir(), ".pi", "agent", "AGENTS.md"));
@@ -270,68 +208,89 @@ async function analyzeProject(
     // Skills loading is best-effort - continue without them
   }
 
-  const userPrompt = buildAnalyzerUserPrompt(obsPath, instinctsDir, project, {
+  const userPrompt = buildSingleShotUserPrompt(project, allInstincts, newObsLines, {
     agentsMdProject,
     agentsMdGlobal,
     installedSkills,
-    observationLines: newObsLines,
   });
 
   const authStorage = AuthStorage.create();
-  const modelRegistry = new ModelRegistry(authStorage);
   const modelId = (config.model || DEFAULT_CONFIG.model) as Parameters<typeof getModel>[1];
   const model = getModel("anthropic", modelId);
+  const apiKey = await authStorage.getApiKey("anthropic");
 
-  // Track instinct operations
-  const instinctCounts: InstinctOpCounts = { created: 0, updated: 0, deleted: 0 };
-  const trackedTools = wrapInstinctToolsWithTracking(project.id, project.name, baseDir, instinctCounts);
-
-  const customTools = [
-    trackedTools.listTool,
-    trackedTools.readTool,
-    trackedTools.writeTool,
-    trackedTools.deleteTool,
-  ];
-
-  const loader = new DefaultResourceLoader({
-    systemPromptOverride: () => buildAnalyzerSystemPrompt(),
-  });
-  await loader.reload();
-
-  const { session } = await createAgentSession({
-    model,
-    authStorage,
-    modelRegistry,
-    sessionManager: SessionManager.inMemory(),
-    customTools,
-    resourceLoader: loader,
-  });
-
-  try {
-    await session.prompt(userPrompt);
-  } finally {
-    session.dispose();
+  if (!apiKey) {
+    throw new Error("No Anthropic API key configured. Set via auth.json or ANTHROPIC_API_KEY.");
   }
 
-  // Collect stats after session completes
-  const sessionStats = session.getSessionStats();
+  const context = {
+    systemPrompt: buildSingleShotSystemPrompt(),
+    messages: [
+      { role: "user" as const, content: userPrompt, timestamp: Date.now() },
+    ],
+  };
+
+  const timeoutMs = (config.timeout_seconds ?? DEFAULT_CONFIG.timeout_seconds) * 1000;
+  const abortController = new AbortController();
+  const timeoutHandle = setTimeout(() => abortController.abort(), timeoutMs);
+
+  const instinctCounts = { created: 0, updated: 0, deleted: 0 };
+  const projectInstinctsDir = getProjectInstinctsDir(project.id, "personal", baseDir);
+  const globalInstinctsDir = getGlobalInstinctsDir("personal", baseDir);
+
+  let singleShotMessage;
+  try {
+    const result = await runSingleShot(context, model, apiKey, abortController.signal);
+    singleShotMessage = result.message;
+
+    for (const change of result.changes) {
+      if (change.action === "delete") {
+        const id = change.id;
+        if (!id) continue;
+        const dir = change.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
+        const filePath = join(dir, `${id}.md`);
+        if (existsSync(filePath)) {
+          unlinkSync(filePath);
+          instinctCounts.deleted++;
+        }
+      } else {
+        // create or update
+        const existing = allInstincts.find((i) => i.id === change.instinct?.id) ?? null;
+        const instinct = buildInstinctFromChange(change, existing, project.id);
+        if (!instinct) continue;
+
+        const dir = instinct.scope === "global" ? globalInstinctsDir : projectInstinctsDir;
+        saveInstinct(instinct, dir);
+
+        if (change.action === "create") {
+          instinctCounts.created++;
+        } else {
+          instinctCounts.updated++;
+        }
+      }
+    }
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
+
+  const usage = singleShotMessage!.usage;
   const durationMs = Date.now() - startTime;
 
   const stats: ProjectRunStats = {
     project_id: project.id,
     project_name: project.name,
     duration_ms: durationMs,
-    observations_processed: newObsLines.length,
+    observations_processed: rawLineCount,
     observations_total: obsCount,
     instincts_created: instinctCounts.created,
     instincts_updated: instinctCounts.updated,
     instincts_deleted: instinctCounts.deleted,
-    tokens_input: sessionStats.tokens.input,
-    tokens_output: sessionStats.tokens.output,
-    tokens_cache_read: sessionStats.tokens.cacheRead,
-    tokens_cache_write: sessionStats.tokens.cacheWrite,
-    tokens_total: sessionStats.tokens.total,
-    cost_usd: sessionStats.cost,
+    tokens_input: usage.input,
+    tokens_output: usage.output,
+    tokens_cache_read: usage.cacheRead,
+    tokens_cache_write: usage.cacheWrite,
+    tokens_total: usage.totalTokens,
+    cost_usd: usage.cost.total,
     model: modelId,
   };
 
@@ -420,7 +379,6 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   releaseLock(getBaseDir());
-  // Last-resort logging - config may not have loaded
   const logger = new AnalyzeLogger();
   logger.error("Fatal error", err);
   process.exit(1);
