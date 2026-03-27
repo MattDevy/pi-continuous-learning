@@ -95,6 +95,32 @@ The script:
 - **Global timeout:** The process exits after 5 minutes regardless of progress.
 - **Stale lock detection:** If a previous run crashed, the lockfile is automatically cleaned up after 10 minutes or if the owning process is no longer alive.
 
+### Logging
+
+The analyzer writes structured JSON logs to `~/.pi/continuous-learning/analyzer.log` (configurable via `log_path` in config). Each run logs:
+
+- **Run timing** - total duration and per-project duration
+- **Token usage** - input, output, cache read/write, total
+- **Cost** - USD cost per project and total
+- **Instinct changes** - counts of created, updated, and deleted instincts
+- **Skip reasons** - why projects were skipped (no new observations, below threshold, etc.)
+- **Errors** - full error details with stack traces
+
+Each log line is a JSON object, making it easy to parse with `jq`:
+
+```bash
+# View recent run summaries
+cat ~/.pi/continuous-learning/analyzer.log | jq 'select(.event == "run_complete")'
+
+# Check total cost over time
+cat ~/.pi/continuous-learning/analyzer.log | jq 'select(.event == "run_complete") | .total_cost_usd'
+
+# See which projects were processed
+cat ~/.pi/continuous-learning/analyzer.log | jq 'select(.event == "project_complete") | {project: .project_name, duration_s: (.duration_ms/1000), cost: .cost_usd}'
+```
+
+The log file auto-rotates at 10 MB (old content moved to `analyzer.log.old`). When the log file is not writable, output falls back to stderr.
+
 ### Setting up a schedule (macOS)
 
 The recommended way to run the analyzer on a recurring schedule on macOS is with `launchd`, which persists across reboots and handles log rotation.
@@ -124,9 +150,9 @@ cat > ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist << EOF
     <key>StartInterval</key>
     <integer>300</integer>
     <key>StandardOutPath</key>
-    <string>/tmp/pi-cl-analyze.log</string>
+    <string>/tmp/pi-cl-analyze-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/pi-cl-analyze.log</string>
+    <string>/tmp/pi-cl-analyze-stderr.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
@@ -153,8 +179,11 @@ The analyzer will now run every 5 minutes (300 seconds) in the background, start
 # Check if the job is loaded
 launchctl list | grep pi-continuous-learning
 
-# View recent output
-tail -20 /tmp/pi-cl-analyze.log
+# View recent log entries (structured JSON)
+tail -5 ~/.pi/continuous-learning/analyzer.log | jq .
+
+# View stderr output (fallback only)
+tail -20 /tmp/pi-cl-analyze-stderr.log
 ```
 
 #### Disabling the schedule
@@ -186,7 +215,7 @@ Use cron:
 crontab -e
 
 # Add this line (runs every 5 minutes):
-*/5 * * * * pi-cl-analyze >> /tmp/pi-cl-analyze.log 2>&1
+*/5 * * * * pi-cl-analyze 2>> /tmp/pi-cl-analyze-stderr.log
 ```
 
 To disable, remove the line from `crontab -e`.
@@ -273,6 +302,7 @@ Only include the fields you want to change — missing fields use the defaults a
 | `max_injection_chars` | 4000 | Character budget for the injection block (~1000 tokens) |
 | `model` | `claude-haiku-4-5` | Model for the background analyzer (lightweight models recommended to minimize cost) |
 | `timeout_seconds` | 120 | Per-project timeout for the analyzer LLM session |
+| `log_path` | `~/.pi/continuous-learning/analyzer.log` | Path to the analyzer log file |
 
 ## Storage
 

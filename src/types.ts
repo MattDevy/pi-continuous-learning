@@ -102,4 +102,5 @@ export interface Config {
   active_hours_start: number; // 0-23
   active_hours_end: number; // 0-23
   max_idle_seconds: number;
+  log_path?: string; // Override analyzer log location (default: ~/.pi/continuous-learning/analyzer.log)
 }

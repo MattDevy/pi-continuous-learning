@@ -67,6 +67,7 @@ const PartialConfigSchema = Type.Partial(
     active_hours_start: Type.Number(),
     active_hours_end: Type.Number(),
     max_idle_seconds: Type.Number(),
+    log_path: Type.String(),
   })
 );
 
