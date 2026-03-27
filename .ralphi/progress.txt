@@ -1,4 +1,9 @@
 ## Codebase Patterns
+- findAgentsMdOverlaps() uses a "coverage" metric (matching tokens / instinct tokens) rather than Jaccard; this is intentional - we care how much of the instinct is covered by AGENTS.md, not symmetric overlap.
+- AgentsMdOverlapSuggestion is appended last in generateEvolveSuggestions() result array; formatter renders it as '## Duplicates AGENTS.md' section.
+- findExcerpt() scans AGENTS.md line-by-line for the first line containing any overlapping token; falls back to first 100 chars of the full text.
+- generateEvolveSuggestions() combines agentsMdProject + agentsMdGlobal with a newline join before calling findAgentsMdOverlaps(); null/undefined params are filtered out before join.
+
 - Add reusable, project-wide implementation patterns here.
 - agents-md.ts is the canonical entry point for reading AGENTS.md files; always use readAgentsMd() - never read directly - to get null-safe behavior.
 - buildAnalyzerUserPrompt accepts an optional AnalyzerUserPromptOptions object; callers that don't need AGENTS.md/skills can omit it entirely (defaults to empty).
@@ -65,4 +70,32 @@ Corrective Plan: N/A
   - The '## Existing Guidelines' block only appears when at least one of agentsMdProject/agentsMdGlobal is non-null
   - InstalledSkill is in types.ts - US-003, US-004, US-005 all depend on this interface
   - US-003 depends on US-002; it uses readAgentsMd() and adds findAgentsMdOverlaps() to the evolve flow
+---
+
+## 2026-03-27 - US-003
+Session: iter-288cf956
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Added AGENTS_MD_OVERLAP_THRESHOLD = 0.6 constant to instinct-evolve-generators.ts
+- Added AgentsMdOverlapSuggestion interface { type: 'agents-md-overlap'; instinct; matchingExcerpt }
+- Added findExcerpt() private helper - finds first AGENTS.md line containing a matching token
+- Added findAgentsMdOverlaps(instincts, agentsMdText) - coverage metric: matchingTokens.length / instinctTokens.size >= 0.6
+- Updated generateEvolveSuggestions() with optional agentsMdProject/agentsMdGlobal params; combines and passes to findAgentsMdOverlaps
+- Updated handleInstinctEvolve() with new 5th param projectRoot?: string | null
+  - Reads {projectRoot}/AGENTS.md and ~/.pi/agent/AGENTS.md via readAgentsMd()
+  - Passes both to generateEvolveSuggestions()
+- Updated formatEvolveSuggestions() to render '## Duplicates AGENTS.md' section (omitted when no overlaps)
+- Updated index.ts EVOLVE_CMD handler to pass project?.root ?? null as projectRoot
+- Files changed:
+  - src/instinct-evolve-generators.ts (+68 lines: constant, interface, findExcerpt, findAgentsMdOverlaps, updated generateEvolveSuggestions)
+  - src/instinct-evolve.ts (+35 lines: new imports, re-exports, formatter section, updated handler signature)
+  - src/index.ts (1 line: pass projectRoot to handleInstinctEvolve)
+  - src/instinct-evolve.test.ts (+220 lines: findAgentsMdOverlaps tests, formatter tests, generateEvolveSuggestions agentsMd tests, handleInstinctEvolve projectRoot tests)
+- **Learnings for future iterations:**
+  - findAgentsMdOverlaps uses a "coverage" metric (instinct token coverage) rather than symmetric Jaccard - deliberate design choice
+  - handleInstinctEvolve 5th param is projectRoot (not baseDir); baseDir stays as 4th param for test injection
+  - Test: inline import statements inside test functions are invalid TypeScript - import at top of file only
+  - generateEvolveSuggestions agentsMd params are optional (undefined = no overlaps); null also = no overlaps
 ---
