@@ -1,4 +1,7 @@
 ## Codebase Patterns
+- findSkillPromotionCandidates is in instinct-skill-promotions.ts (not generators); takes (instincts, mergeClusters: Instinct[][], shadowIds) - uses Instinct[][] not MergeSuggestion[] to avoid circular deps.
+- Cluster members tracked in clusterMemberIds Set inside findSkillPromotionCandidates; singles pass skips those IDs to prevent double-reporting.
+- instinct-evolve-generators.ts extracts mergeClusters = mergeSuggestions.map(s => s.instincts) then shadowIds = new Set(skillShadows.map(s => s.instinct.id)) before calling findSkillPromotionCandidates.
 - tokenizeText lives in instinct-text-utils.ts (not generators); import from there for any new dedup/overlap code. generators.ts re-exports it for backward compat.
 - Skill shadow detection is in instinct-skill-shadows.ts; generators.ts re-exports findSkillShadows/SkillShadowSuggestion/SKILL_SHADOW_TOKEN_THRESHOLD.
 - Token overlap tests: tokenizeText does NOT stem (debugging != debug, errors != error, logs != log). Write tests using exact token matches.
@@ -159,4 +162,37 @@ Corrective Plan: N/A
   - findSkillShadows is in instinct-skill-shadows.ts, not generators - import from there for US-006
   - shadowIds for US-006 = Set<string> from skillShadows map(s => s.instinct.id); thread from generateEvolveSuggestions into findSkillPromotionCandidates
   - US-006 depends on US-005 - can now access findSkillShadows results via generateEvolveSuggestions return
+---
+
+## 2026-03-27 - US-006
+Session: iter-d6094efc
+Review Outcome: PASS
+Trajectory: ON_TRACK
+Trajectory Notes: N/A
+Corrective Plan: N/A
+- Created instinct-skill-promotions.ts with:
+  - SKILL_PROMOTION_SINGLE_CONFIDENCE_THRESHOLD = 0.8
+  - SKILL_PROMOTION_CLUSTER_CONFIDENCE_THRESHOLD = 0.7
+  - SkillPromotionSuggestion interface { type: 'skill-promotion'; instincts; reason; domain }
+  - findSkillPromotionCandidates(instincts, mergeClusters, shadowIds):
+    - Cluster pass: all confidence >= 0.7, single domain in SKILL_DOMAINS, no member in shadowIds
+    - Single pass: confidence >= 0.8, domain in SKILL_DOMAINS, not in shadowIds, not a cluster member
+- Updated instinct-evolve-generators.ts:
+  - Imports/re-exports SKILL_PROMOTION_* constants, findSkillPromotionCandidates, SkillPromotionSuggestion
+  - SkillPromotionSuggestion added to EvolveSuggestion union
+  - generateEvolveSuggestions threads shadowIds from skillShadows and mergeClusters from mergeSuggestions into findSkillPromotionCandidates
+- Updated instinct-evolve.ts:
+  - Re-exports new constants/function/type
+  - Formatter renders 'Skill Promotion Candidates' section (omitted when empty)
+- Files changed:
+  - src/instinct-skill-promotions.ts (new, 103 lines)
+  - src/instinct-skill-promotions.test.ts (new, 19 tests)
+  - src/instinct-evolve-generators.ts (imports + re-exports + updated generateEvolveSuggestions)
+  - src/instinct-evolve.ts (re-exports + formatter section)
+  - src/instinct-evolve.test.ts (new imports + ~15 integration tests)
+  - .ralphi/prd.json (US-006 status -> done)
+- **Learnings for future iterations:**
+  - Avoid circular deps by passing Instinct[][] (clusters) rather than MergeSuggestion[] to the promotions module
+  - makeInstinct fixture in new test files must use snake_case fields matching the Instinct interface (project_id, created_at, etc.)
+  - All 6 user stories are now done - PRD is complete
 ---
