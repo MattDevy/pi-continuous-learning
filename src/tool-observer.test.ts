@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { clearActiveInstincts, setCurrentActiveInstincts } from "./active-instincts.js";
-import { setAnalyzerRunning } from "./observer-guard.js";
 import { ensureStorageLayout } from "./storage.js";
 import {
   handleToolEnd,
@@ -77,12 +76,12 @@ afterAll(() => {
 
 beforeEach(() => {
   clearActiveInstincts();
-  setAnalyzerRunning(false);
+
 });
 
 afterEach(() => {
   clearActiveInstincts();
-  setAnalyzerRunning(false);
+
 });
 
 // ---------------------------------------------------------------------------
@@ -162,18 +161,6 @@ describe("handleToolStart", () => {
     expect(last["active_instincts"]).toBeUndefined();
   });
 
-  it("skips recording when analyzer is running (self-observation guard)", () => {
-    const ctx = makeCtx();
-    setAnalyzerRunning(true);
-
-    const before = readObservations(PROJECT.id, tmpDir).length;
-    const event = makeStartEvent("write", { path: "out.txt", content: "data" });
-    handleToolStart(event, ctx, PROJECT, tmpDir);
-    const after = readObservations(PROJECT.id, tmpDir).length;
-
-    expect(after).toBe(before);
-  });
-
   it("passes through string args without double-stringifying", () => {
     const ctx = makeCtx();
     const event = makeStartEvent("bash", "plain string arg");
@@ -248,18 +235,6 @@ describe("handleToolEnd", () => {
 
     const last = lastObs(PROJECT.id, tmpDir);
     expect(last["active_instincts"]).toEqual(["instinct-x"]);
-  });
-
-  it("skips recording when analyzer is running (self-observation guard)", () => {
-    const ctx = makeCtx();
-    setAnalyzerRunning(true);
-
-    const before = readObservations(PROJECT.id, tmpDir).length;
-    const event = makeEndEvent("write", "done");
-    handleToolEnd(event, ctx, PROJECT, tmpDir);
-    const after = readObservations(PROJECT.id, tmpDir).length;
-
-    expect(after).toBe(before);
   });
 
   it("passes through string result without double-stringifying", () => {

@@ -7,6 +7,7 @@
 import {
   appendFileSync,
   existsSync,
+  readFileSync,
   readdirSync,
   renameSync,
   statSync,
@@ -53,6 +54,17 @@ export function appendObservation(
  * Deletes archive files older than 30 days.
  * Should be called once per session_start.
  */
+/**
+ * Counts non-empty lines in the project's observations.jsonl file.
+ * Returns 0 when the file does not exist.
+ */
+export function countObservations(projectId: string, baseDir?: string): number {
+  const obsPath = getObservationsPath(projectId, baseDir);
+  if (!existsSync(obsPath)) return 0;
+  const content = readFileSync(obsPath, "utf-8") as string;
+  return content.split("\n").filter((line) => line.trim() !== "").length;
+}
+
 export function cleanOldArchives(projectId: string, baseDir?: string): void {
   const archiveDir = getArchiveDir(projectId, baseDir);
   if (!existsSync(archiveDir)) return;

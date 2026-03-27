@@ -1,35 +1,32 @@
 # pi-continuous-learning
 
-A [Pi](https://github.com/nicholasgasior/pi-coding-agent) extension that observes your coding sessions, records events, and uses a background Haiku process to distill observations into reusable "instincts" - atomic learned behaviors with confidence scoring, project scoping, and closed-loop feedback validation.
+A [Pi](https://github.com/nicholasgasior/pi-coding-agent) extension that observes your coding sessions and distills patterns into reusable "instincts" - atomic learned behaviors with confidence scoring, project scoping, and closed-loop feedback validation.
 
 Inspired by [everything-claude-code/continuous-learning-v2](https://github.com/nicholasb/everything-claude-code), reimplemented as a native Pi extension in TypeScript.
 
 ## How It Works
 
 ```
-Pi Session
-  |  Extension events (tool_call, tool_result, agent_end, ...)
+Pi Session (extension)                     Background analyzer (standalone)
+──────────────────────                     ──────────────────────────────────
+Extension events                           Runs on a schedule (cron/launchd)
+  │                                          │
+  v                                          v
+Observation Collector                      Reads observations.jsonl per project
+  │  writes observations.jsonl               │
+  v                                          v
+System Prompt Injection                    Haiku LLM analyzes patterns,
+  │  injects high-confidence instincts       creates/updates instinct files
+  v                                          │
+Feedback Loop                              Instinct Files (.md with YAML frontmatter)
+  │  records which instincts were active
   v
-Observation Collector  -->  observations.jsonl (per project)
-  |
-  |  Every 5 minutes (background)
-  v
-Analyzer (Haiku subprocess via `pi -p`)
-  |  Reads observations, detects patterns,
-  |  validates existing instincts via feedback loop
-  v
-Instinct Files (.md with YAML frontmatter)
-  |
-  |  before_agent_start event
-  v
-System Prompt Injection  -->  high-confidence instincts appended to prompt
-  |
-  |  Records which instincts were active
-  v
-Feedback Loop  -->  confirms, contradicts, or ignores injected instincts
+Confirms, contradicts, or ignores injected instincts
 ```
 
-**The key idea:** the extension watches what you do, learns patterns, injects relevant instincts into future sessions, then validates whether those instincts actually helped - adjusting confidence based on real outcomes rather than observation count alone.
+**The key idea:** the extension watches what you do, learns patterns, injects relevant instincts into future sessions, then validates whether those instincts actually helped — adjusting confidence based on real outcomes rather than observation count alone.
+
+The analyzer runs as a **separate background process** (not inside your Pi session), so it never causes lag or interference. It processes all your projects in a single pass.
 
 ## Installation
 
@@ -47,60 +44,184 @@ pi install .
 ### Requirements
 
 - [Pi](https://github.com/nicholasgasior/pi-coding-agent) >= 0.62.0
-- An active Claude subscription (the background analyzer uses Haiku via your existing Pi credentials - no separate API key needed)
+- An active Claude subscription (the analyzer uses Haiku via your existing Pi credentials — no separate API key needed)
+- Node.js >= 18 (for the standalone analyzer script)
 
 ## Usage
 
-Once installed, the extension runs automatically. No configuration required.
+Once installed, the extension runs automatically in your Pi sessions — observing events and injecting instincts. No configuration required for the extension itself.
 
-### What happens in the background
-
-1. **Observes** - captures tool calls, user prompts, errors, and outcomes via Pi extension events
-2. **Records** - writes observations to project-scoped JSONL files under `~/.pi/continuous-learning/`
-3. **Analyzes** - every 5 minutes, spawns a background Haiku subprocess to detect patterns
-4. **Learns** - creates/updates instinct files with confidence scoring and evidence
-5. **Injects** - appends high-confidence instincts to your system prompt each turn
-6. **Validates** - tracks whether injected instincts align with actual behavior, adjusting confidence accordingly
+To analyze observations and create/update instincts, you need to run the analyzer separately (see [Background Analyzer](#background-analyzer) below).
 
 ### Slash Commands
 
 | Command | Description |
 |---------|-------------|
 | `/instinct-status` | Show all instincts grouped by domain with confidence scores and feedback stats |
-| `/instinct-evolve` | Suggest instinct consolidations, promotions, and higher-order constructs |
+| `/instinct-evolve` | LLM-powered analysis of instincts: suggests merges, promotions, and cleanup |
 | `/instinct-export` | Export instincts to a JSON file (filterable by scope/domain) |
 | `/instinct-import <path>` | Import instincts from a JSON file |
 | `/instinct-promote [id]` | Promote project instincts to global scope |
 | `/instinct-projects` | List all known projects and their instinct counts |
 
-### Example instinct file
+### LLM Tools
+
+The extension registers tools that the LLM can use during conversation:
+
+| Tool | Description |
+|------|-------------|
+| `instinct_list` | List instincts with optional scope/domain filters |
+| `instinct_read` | Read a specific instinct by ID |
+| `instinct_write` | Create or update an instinct |
+| `instinct_delete` | Remove an instinct by ID |
+| `instinct_merge` | Merge multiple instincts into one |
+
+You can ask Pi things like "show me my instincts", "merge these two instincts", or "delete low-confidence instincts" and it will use these tools.
+
+## Background Analyzer
+
+The analyzer is a standalone script that processes observations across all your projects and creates/updates instincts using Haiku. It runs outside of Pi sessions for efficiency — one process handles all projects, regardless of how many Pi sessions you have open.
+
+### Running manually
+
+```bash
+# From the extension directory
+npx tsx src/cli/analyze.ts
+
+# Or if installed globally
+npx pi-cl-analyze
+```
+
+The script:
+1. Iterates all projects in `~/.pi/continuous-learning/projects.json`
+2. Skips projects with no new observations since last analysis
+3. Skips projects with fewer than 20 observations (configurable)
+4. For eligible projects: runs confidence decay, then uses Haiku to analyze patterns and write instinct files
+5. Records a `last_analyzed_at` timestamp to avoid reprocessing
+
+**Safety features:**
+- **Lockfile guard:** Only one instance can run at a time. Subsequent invocations exit immediately with code 0.
+- **Global timeout:** The process exits after 5 minutes regardless of progress.
+- **Stale lock detection:** If a previous run crashed, the lockfile is automatically cleaned up after 10 minutes or if the owning process is no longer alive.
+
+### Setting up a schedule (macOS)
+
+The recommended way to run the analyzer on a recurring schedule on macOS is with `launchd`, which persists across reboots and handles log rotation.
+
+#### 1. Create the plist file
+
+```bash
+cat > ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.pi-continuous-learning.analyze</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/npx</string>
+        <string>tsx</string>
+        <string>src/cli/analyze.ts</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/path/to/pi-continuous-learning</string>
+    <key>StartInterval</key>
+    <integer>300</integer>
+    <key>StandardOutPath</key>
+    <string>/tmp/pi-cl-analyze.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/pi-cl-analyze.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>
+EOF
+```
+
+**Before loading**, edit the file to fix two values:
+- Change `/usr/local/bin/npx` to the output of `which npx`
+- Change `/path/to/pi-continuous-learning` to the actual path where the extension is installed
+
+#### 2. Load the schedule
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist
+```
+
+The analyzer will now run every 5 minutes (300 seconds) in the background, starting on login. It's safe for overlapping triggers — the lockfile guard ensures only one instance runs.
+
+#### 3. Verify it's running
+
+```bash
+# Check if the job is loaded
+launchctl list | grep pi-continuous-learning
+
+# View recent output
+tail -20 /tmp/pi-cl-analyze.log
+```
+
+#### Disabling the schedule
+
+```bash
+# Stop and unload (persists across reboots — the job will not restart)
+launchctl unload ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist
+
+# Optionally remove the plist file entirely
+rm ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist
+```
+
+#### Temporarily pausing
+
+To pause without removing the schedule:
+
+```bash
+# Disable (keeps the plist but prevents it from running)
+launchctl unload ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist
+
+# Re-enable later
+launchctl load ~/Library/LaunchAgents/com.pi-continuous-learning.analyze.plist
+```
+
+### Setting up a schedule (Linux/other)
+
+Use cron:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add this line (runs every 5 minutes):
+*/5 * * * * cd /path/to/pi-continuous-learning && npx tsx src/cli/analyze.ts >> /tmp/pi-cl-analyze.log 2>&1
+```
+
+To disable, remove the line from `crontab -e`.
+
+## Example instinct file
 
 Instincts are stored as Markdown files with YAML frontmatter:
 
 ```yaml
 ---
 id: grep-before-edit
+title: Grep Before Edit
 trigger: "when modifying code files"
 confidence: 0.7
 domain: "workflow"
-source: "session-observation"
+source: "personal"
 scope: project
 project_id: "a1b2c3d4e5f6"
+project_name: "my-project"
 observation_count: 8
 confirmed_count: 5
 contradicted_count: 1
 inactive_count: 12
 ---
 
-# Grep Before Edit
-
-## Action
 Always search with grep to find relevant context before editing files.
-
-## Evidence
-- Observed 8 instances of grep-then-edit workflow
-- Confirmed 5 times: agent used grep before edit while instinct was active
-- Contradicted 1 time: agent edited without searching first
 ```
 
 ## Confidence Scoring
@@ -124,8 +245,6 @@ This means an instinct observed 20 times but consistently contradicted in practi
 
 ## Updating
 
-To update to the latest version:
-
 ```bash
 pi install pi-continuous-learning
 ```
@@ -139,6 +258,8 @@ pi install .
 ```
 
 Your observations, instincts, and configuration are stored separately in `~/.pi/continuous-learning/` and are preserved across updates.
+
+If you have a launchd schedule set up, no changes needed — it will automatically use the updated code.
 
 ## Configuration
 
@@ -158,19 +279,15 @@ Optional. Defaults work out of the box. Override at `~/.pi/continuous-learning/c
 }
 ```
 
-Only include the fields you want to change - missing fields use the defaults above.
+Only include the fields you want to change — missing fields use the defaults above.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `run_interval_minutes` | 5 | How often the background analyzer runs |
 | `min_observations_to_analyze` | 20 | Minimum observations before analysis triggers |
 | `min_confidence` | 0.5 | Instincts below this are not injected into prompts |
 | `max_instincts` | 20 | Maximum instincts injected per turn |
-| `model` | `claude-haiku-4-5` | Model for the analyzer subprocess |
-| `timeout_seconds` | 120 | Kill analyzer subprocess after this many seconds |
-| `active_hours_start` | 8 | Don't run analyzer before this hour (local time) |
-| `active_hours_end` | 23 | Don't run analyzer after this hour (local time) |
-| `max_idle_seconds` | 1800 | Skip analysis if no observation in this many seconds |
+| `model` | `claude-haiku-4-5` | Model for the background analyzer |
+| `timeout_seconds` | 120 | Per-project timeout for the analyzer LLM session |
 
 ## Storage
 
@@ -180,37 +297,21 @@ All data stays local on your machine:
 ~/.pi/continuous-learning/
   config.json                   # Optional overrides
   projects.json                 # Project registry
+  analyze.lock                  # Lockfile (present only while analyzer runs)
   instincts/personal/           # Global instincts
   projects/<hash>/
+    project.json                # Project metadata + last_analyzed_at
     observations.jsonl          # Current observations
     observations.archive/       # Archived (auto-purged after 30 days)
     instincts/personal/         # Project-scoped instincts
-    analyzer.log                # Analyzer lifecycle log (info, warnings, errors)
-```
-
-### Checking analyzer activity
-
-The `analyzer.log` file tracks every timer tick and analysis run. To see if the analyzer is working:
-
-```bash
-cat ~/.pi/continuous-learning/projects/<hash>/analyzer.log
-```
-
-You'll see entries like:
-
-```
-[2026-03-26T14:30:00.000Z] [analyzer-timer] Info: Tick skipped: not enough observations
-[2026-03-26T14:35:00.000Z] [analyzer-timer] Info: Tick fired: starting analysis
-[2026-03-26T14:35:01.000Z] [analyzer-runner] Info: Analysis started
-[2026-03-26T14:35:45.000Z] [analyzer-runner] Info: Analysis completed: 2 file(s) written
 ```
 
 ## Privacy & Security
 
-- All data stays on your machine - no external telemetry
+- All data stays on your machine — no external telemetry
 - Secrets (API keys, tokens, passwords) are scrubbed from observations before writing to disk
-- Only instincts (patterns) can be exported - never raw observations
-- The analyzer subprocess reuses your existing Pi/Claude subscription credentials
+- Only instincts (patterns) can be exported — never raw observations
+- The analyzer reuses your existing Pi/Claude subscription credentials
 - No separate API key required
 
 ## Development
@@ -227,6 +328,9 @@ npx tsc --noEmit
 
 # All checks
 npx vitest run && npx eslint src/ && npx tsc --noEmit
+
+# Run analyzer manually (for development)
+npx tsx src/cli/analyze.ts
 ```
 
 ## License

@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { clearActiveInstincts, setCurrentActiveInstincts } from "./active-instincts.js";
-import { setAnalyzerRunning } from "./observer-guard.js";
 import { ensureStorageLayout } from "./storage.js";
 import {
   handleAgentEnd,
@@ -75,12 +74,10 @@ afterAll(() => {
 
 beforeEach(() => {
   clearActiveInstincts();
-  setAnalyzerRunning(false);
 });
 
 afterEach(() => {
   clearActiveInstincts();
-  setAnalyzerRunning(false);
 });
 
 // ---------------------------------------------------------------------------
@@ -147,17 +144,6 @@ describe("handleBeforeAgentStart", () => {
     expect(last["active_instincts"]).toBeUndefined();
   });
 
-  it("skips recording when analyzer is running (self-observation guard)", () => {
-    const ctx = makeCtx();
-    setAnalyzerRunning(true);
-
-    const before = readObservations(PROJECT.id, tmpDir).length;
-    const event = makePromptEvent("This should not be recorded");
-    handleBeforeAgentStart(event, ctx, PROJECT, tmpDir);
-    const after = readObservations(PROJECT.id, tmpDir).length;
-
-    expect(after).toBe(before);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -202,15 +188,4 @@ describe("handleAgentEnd", () => {
     expect(last["active_instincts"]).toEqual(["instinct-z"]);
   });
 
-  it("skips recording when analyzer is running (self-observation guard)", () => {
-    const ctx = makeCtx();
-    setAnalyzerRunning(true);
-
-    const before = readObservations(PROJECT.id, tmpDir).length;
-    const event = makeAgentEndEvent();
-    handleAgentEnd(event, ctx, PROJECT, tmpDir);
-    const after = readObservations(PROJECT.id, tmpDir).length;
-
-    expect(after).toBe(before);
-  });
 });

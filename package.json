@@ -1,6 +1,6 @@
 {
   "name": "pi-continuous-learning",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A Pi extension that observes coding sessions and distills patterns into reusable instincts.",
   "type": "module",
   "keywords": [
@@ -11,7 +11,11 @@
       "src/index.ts"
     ]
   },
+  "bin": {
+    "pi-cl-analyze": "src/cli/analyze.ts"
+  },
   "scripts": {
+    "analyze": "npx tsx src/cli/analyze.ts",
     "test": "vitest run",
     "lint": "eslint src/",
     "build": "tsc --noEmit",
