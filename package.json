@@ -3,29 +3,51 @@
   "version": "0.3.0",
   "description": "A Pi extension that observes coding sessions and distills patterns into reusable instincts.",
   "type": "module",
-  "keywords": [
-    "pi-package",
-    "pi-extension"
-  ],
+  "license": "MIT",
+  "author": "Matt Devy",
   "repository": {
     "type": "git",
     "url": "https://github.com/MattDevy/pi-continuous-learning.git"
   },
+  "homepage": "https://github.com/MattDevy/pi-continuous-learning#readme",
+  "bugs": {
+    "url": "https://github.com/MattDevy/pi-continuous-learning/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi-coding-agent",
+    "continuous-learning",
+    "instincts"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "pi": {
     "extensions": [
-      "src/index.ts"
+      "dist/index.js"
     ]
   },
   "bin": {
-    "pi-cl-analyze": "src/cli/analyze.ts"
+    "pi-cl-analyze": "dist/cli/analyze.js"
   },
   "scripts": {
-    "analyze": "npx tsx src/cli/analyze.ts",
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint src/",
-    "build": "tsc --noEmit",
-    "typecheck": "tsc --noEmit",
-    "check": "vitest run && eslint src/ && tsc --noEmit"
+    "check": "vitest run && eslint src/ && tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run check"
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "^0.62.0",
