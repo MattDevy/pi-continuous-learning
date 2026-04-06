@@ -20,7 +20,7 @@ Inspired by [everything-claude-code/continuous-learning-v2](https://github.com/n
 
 ## Architecture
 
-```
+```text
 Pi Session
   |
   | Extension events (tool_call, tool_result, agent_end, etc.)
@@ -72,7 +72,7 @@ Pi Session
 
 ## Package Structure
 
-```
+```text
 pi-continuous-learning/
   package.json              # pi-package manifest
   src/
@@ -108,8 +108,6 @@ Published as a pi-package with:
 ```
 
 No runtime dependencies needed - the analyzer runs via Pi CLI subprocess, reusing the user's existing subscription credentials.
-
-````
 
 ---
 
@@ -206,7 +204,7 @@ interface ProjectEntry {
 
 ## Storage Layout
 
-```
+```text
 ~/.pi/continuous-learning/
   config.json                     # User configuration overrides
   projects.json                   # Registry: hash -> project metadata
@@ -401,7 +399,7 @@ The system prompt instructs Haiku on:
 
 The analyzer prompt includes a dedicated section on feedback analysis:
 
-```
+```markdown
 ## Feedback Analysis
 
 Some observations include an `active_instincts` field listing instinct IDs that were
@@ -504,7 +502,7 @@ Step 7 is the bridge that closes the feedback loop. The injector sets a module-l
 
 ### Injection Format
 
-```
+```markdown
 ## Learned Behaviors (Instincts)
 
 The following patterns have been learned from previous sessions. Apply them when relevant:

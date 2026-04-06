@@ -6,7 +6,7 @@ Inspired by [everything-claude-code/continuous-learning-v2](https://github.com/n
 
 ## How It Works
 
-```
+```text
 Pi Session (extension)                     Background analyzer (standalone)
 ──────────────────────                     ──────────────────────────────────
 Extension events                           Runs on a schedule (cron/launchd)
@@ -311,7 +311,7 @@ This means an instinct observed 20 times but consistently contradicted in practi
 
 Instincts are designed to be short-lived - they should graduate into permanent knowledge within a few weeks. The graduation pipeline (`/instinct-graduate`) handles this lifecycle:
 
-```
+```text
 Observation -> Instinct (days) -> AGENTS.md / Skill / Command (1-2 weeks)
 ```
 
@@ -391,7 +391,7 @@ Only include the fields you want to change — missing fields use the defaults a
 
 All data stays local on your machine:
 
-```
+```text
 ~/.pi/continuous-learning/
   config.json                   # Optional overrides
   projects.json                 # Project registry

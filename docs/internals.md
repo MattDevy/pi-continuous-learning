@@ -17,7 +17,7 @@ The system has two separate runtimes:
 
 All data lives under `~/.pi/continuous-learning/`. The extension creates this structure on first `session_start` via `ensureStorageLayout()` in `storage.ts`.
 
-```
+```text
 ~/.pi/continuous-learning/
   config.json                          # User config overrides (optional)
   projects.json                        # Registry mapping project hash -> metadata
@@ -118,7 +118,7 @@ The 12-character hash means the same repo produces the same ID across machines (
 
 ### 1. Observation Collection (Pi Extension)
 
-```
+```text
 Pi event (tool_execution_start, tool_execution_end, before_agent_start, agent_end)
   |
   v
@@ -144,7 +144,7 @@ observations.ts    -- appendFileSync to observations.jsonl, rotate at 10 MB
 
 ### 2. Background Analysis (Standalone Script)
 
-```
+```text
 cron/launchd fires src/cli/analyze.ts
   |
   v
@@ -198,7 +198,7 @@ Release lockfile
 
 ### 3. System Prompt Injection (Pi Extension)
 
-```
+```text
 before_agent_start event
   |
   v
@@ -217,7 +217,7 @@ active-instincts.ts  -- store injected IDs in module-level state for observer to
 
 **Injection format** appended to the system prompt:
 
-```
+```markdown
 ## Learned Behaviors (Instincts)
 
 - [0.85] When modifying code: Search with grep, confirm with read, then edit
@@ -416,7 +416,7 @@ All values clamped to [0.1, 0.9]. If the pre-clamp value drops below 0.1, `flagg
 
 ### Pi Extension (`src/index.ts`)
 
-```
+```text
 index.ts (entry point)
   |-- config.ts              -- load config from disk
   |-- project.ts             -- detect project via git
@@ -451,7 +451,7 @@ index.ts (entry point)
 
 ### Standalone Analyzer (`src/cli/analyze.ts`)
 
-```
+```text
 cli/analyze.ts (entry point, run via cron)
   |-- config.ts                          -- load config
   |-- storage.ts                         -- path helpers
@@ -613,7 +613,7 @@ The graduation pipeline promotes mature instincts into permanent knowledge. Impl
 
 ### Lifecycle
 
-```
+```text
 Observation -> Instinct (days) -> AGENTS.md / Skill / Command (1-2 weeks)
                                     |
                                     v
@@ -622,7 +622,7 @@ Observation -> Instinct (days) -> AGENTS.md / Skill / Command (1-2 weeks)
                               - Moderate confidence: aggressively decayed
 ```
 
-### Modules
+### Graduation Modules
 
 | Module                 | Responsibility                                                                                                                                                       |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -731,7 +731,7 @@ This is safe because:
 
 The extension calls `checkAnalysisNotifications()` on every `before_agent_start`. If events exist, a one-line notification is shown via `ctx.ui.notify()`:
 
-```
+```text
 [instincts] Background analysis: +1 new (use-result-type), 2 updated, 0 deleted
 ```
 

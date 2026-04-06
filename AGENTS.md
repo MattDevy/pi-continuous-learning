@@ -30,7 +30,7 @@ Individual commands:
 
 ## Directory Structure
 
-```
+```text
 pi-continuous-learning/
   package.json              # pi-package manifest
   src/
