@@ -11,6 +11,8 @@ npm test -- -t "pattern"          # run tests matching a name pattern
 npm run typecheck                 # type-check without emitting
 npm run lint                      # ESLint on src/
 npm run check                     # tests + lint + typecheck (mirrors CI)
+npm run lint:mega                 # run MegaLinter locally (requires Docker)
+npm run lint:mega:fix             # run MegaLinter and auto-fix formatting
 npm run build                     # compile to dist/
 ```
 
