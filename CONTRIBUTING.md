@@ -23,6 +23,22 @@ npm run check                   # tests + lint + typecheck (mirrors CI)
 
 All three checks must pass before submitting a PR. CI runs them automatically.
 
+## Full lint (MegaLinter)
+
+CI also runs [MegaLinter](https://megalinter.io/) which checks YAML/JSON formatting (Prettier), Markdown, shell scripts, spelling, and secret scanning. You can run the same checks locally before pushing — requires [Docker](https://docs.docker.com/get-docker/).
+
+```bash
+# Lint changed files only (matches CI behaviour)
+npx mega-linter-runner --flavor javascript --release v9
+
+# Auto-fix formatting issues (Prettier for YAML/JSON, shfmt for shell)
+npx mega-linter-runner --flavor javascript --release v9 --fix
+```
+
+With `--fix`, MegaLinter writes formatting changes directly to your files. Review the diff and commit the results.
+
+> `VALIDATE_ALL_CODEBASE` is set to `false` in `.mega-linter.yml`. In CI this means only PR-changed files are linted. Locally, MegaLinter falls back to `git diff` — so staged and modified files are checked.
+
 ## Commit messages
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
