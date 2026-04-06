@@ -72,7 +72,6 @@
 
 <!-- Arrows inside session -->
 <line x1="110" y1="100" x2="110" y2="146" stroke="#9b9b9b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
-<text class="ts" x="168" y="128" text-anchor="middle">observations.jsonl</text>
 
 <!-- observation collector → system prompt injection -->
 <line x1="180" y1="174" x2="218" y2="174" stroke="#9b9b9b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
@@ -80,9 +79,9 @@
 <!-- system prompt → feedback -->
 <line x1="295" y1="200" x2="295" y2="230" stroke="#9b9b9b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
 
-<!-- feedback → system prompt (validates, dashed) -->
-<path d="M220 254 Q180 254 180 200 Q180 148 218 168" fill="none" stroke="#c8c6be" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
-<text class="ts" x="155" y="212" text-anchor="middle">validates</text>
+<!-- feedback loop → observation collector (agent_end records outcomes as observations, dashed) -->
+<path d="M220 262 L195 262 L195 190 L182 190" fill="none" stroke="#c8c6be" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+<text class="ts" x="190" y="226" text-anchor="end">records outcomes</text>
 
 <!-- Background analyzer container -->
 <rect x="430" y="20" width="230" height="200" rx="14" fill="none" stroke="#c8c6be" stroke-width="1" stroke-dasharray="6 4"/>
