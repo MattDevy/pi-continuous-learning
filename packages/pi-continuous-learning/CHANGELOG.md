@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.12.1...pi-continuous-learning-v0.13.0) (2026-04-06)
+
+
+### Features
+
+* Add facts/knowledge notes memory class alongside instincts ([#68](https://github.com/MattDevy/pi-extensions/issues/68)) ([ad91fce](https://github.com/MattDevy/pi-extensions/commit/ad91fceacf4dfb002f9b9efacbf51d4163501a6f))
+
 ## [0.12.1](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.12.0...pi-continuous-learning-v0.12.1) (2026-04-06)
 
 
