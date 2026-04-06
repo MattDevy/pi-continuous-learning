@@ -184,7 +184,7 @@ describe("handleUserBash", () => {
     const event: UserBashEvent = {
       type: "user_bash",
       command:
-        "curl -H 'Authorization: Bearer sk-secret123' https://api.example.com",
+        "curl -H 'Authorization: Bearer sk-secret123' https://api.example.com", // gitleaks:allow
       excludeFromContext: false,
       cwd: "/tmp",
     };
