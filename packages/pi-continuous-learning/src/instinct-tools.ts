@@ -13,6 +13,10 @@ import {
 import { getProjectInstinctsDir, getGlobalInstinctsDir } from "./storage.js";
 import { validateInstinct, findSimilarInstinct } from "./instinct-validator.js";
 import { normalizeRelativeDates } from "./text-utils.js";
+import {
+  generateGlobalSummary,
+  generateProjectSummary,
+} from "./instinct-summary.js";
 
 function getInstinctsDir(
   scope: "project" | "global",
@@ -203,6 +207,8 @@ export function createInstinctWriteTool(
       };
 
       saveInstinct(instinct, dir);
+      if (projectId) generateProjectSummary(projectId, baseDir);
+      generateGlobalSummary(baseDir);
 
       return {
         content: [
@@ -337,6 +343,8 @@ export function createInstinctDeleteTool(
           );
         }
         unlinkSync(path);
+        if (projectId) generateProjectSummary(projectId, baseDir);
+        generateGlobalSummary(baseDir);
         return {
           content: [
             {
@@ -353,6 +361,8 @@ export function createInstinctDeleteTool(
         throw new Error(`Instinct not found: ${params.id}`);
       }
       unlinkSync(found.path);
+      if (projectId) generateProjectSummary(projectId, baseDir);
+      generateGlobalSummary(baseDir);
       return {
         content: [
           {
@@ -440,6 +450,9 @@ export function createInstinctMergeTool(
         unlinkSync(path);
         deleted.push(`${id}(${scope})`);
       }
+
+      if (projectId) generateProjectSummary(projectId, baseDir);
+      generateGlobalSummary(baseDir);
 
       return {
         content: [

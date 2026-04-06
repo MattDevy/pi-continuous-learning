@@ -61,6 +61,10 @@ import {
   loadGlobalInstincts,
   saveInstinct,
 } from "../instinct-store.js";
+import {
+  generateGlobalSummary,
+  generateProjectSummary,
+} from "../instinct-summary.js";
 import { readAgentsMd } from "../agents-md.js";
 import { homedir } from "node:os";
 import {
@@ -976,6 +980,18 @@ async function main(): Promise<void> {
     };
 
     logger.runComplete(summary);
+
+    // Regenerate summary files whenever any instincts changed
+    const anyChanges =
+      summary.total_instincts_created > 0 ||
+      summary.total_instincts_updated > 0 ||
+      summary.total_instincts_deleted > 0;
+    if (anyChanges) {
+      generateGlobalSummary(baseDir);
+      for (const stats of allProjectStats) {
+        generateProjectSummary(stats.project_id, baseDir);
+      }
+    }
   } finally {
     releaseLock(baseDir);
   }

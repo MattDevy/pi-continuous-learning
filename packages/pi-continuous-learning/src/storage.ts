@@ -53,6 +53,17 @@ export function getProjectsRegistryPath(baseDir = getBaseDir()): string {
   return join(baseDir, "projects.json");
 }
 
+export function getGlobalSummaryPath(baseDir = getBaseDir()): string {
+  return join(baseDir, "INSTINCT_SUMMARY.md");
+}
+
+export function getProjectSummaryPath(
+  projectId: string,
+  baseDir = getBaseDir(),
+): string {
+  return join(getProjectDir(projectId, baseDir), "INSTINCT_SUMMARY.md");
+}
+
 function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
