@@ -268,7 +268,7 @@ Every write is validated and deduplicated before saving.
 
 Instincts are designed to be short-lived — they should graduate into permanent knowledge within a few weeks:
 
-```
+```text
 Observation → Instinct (days) → AGENTS.md / Skill / Command (1–2 weeks)
 ```
 
@@ -328,7 +328,7 @@ All defaults work out of the box. Override at `~/.pi/continuous-learning/config.
 
 All data stays local on your machine:
 
-```
+```text
 ~/.pi/continuous-learning/
   config.json                   # Optional overrides
   projects.json                 # Project registry
