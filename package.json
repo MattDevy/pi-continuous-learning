@@ -47,6 +47,8 @@
     "test": "vitest run",
     "lint": "eslint src/",
     "check": "vitest run && eslint src/ && tsc --noEmit",
+    "lint:mega": "npx mega-linter-runner --flavor javascript --release v9",
+    "lint:mega:fix": "npx mega-linter-runner --flavor javascript --release v9 --fix",
     "prepublishOnly": "npm run build && npm run check"
   },
   "peerDependencies": {

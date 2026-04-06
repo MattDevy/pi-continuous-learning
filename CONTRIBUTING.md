@@ -28,11 +28,8 @@ All three checks must pass before submitting a PR. CI runs them automatically.
 CI also runs [MegaLinter](https://megalinter.io/) which checks YAML/JSON formatting (Prettier), Markdown, shell scripts, spelling, and secret scanning. You can run the same checks locally before pushing — requires [Docker](https://docs.docker.com/get-docker/).
 
 ```bash
-# Lint changed files only (matches CI behaviour)
-npx mega-linter-runner --flavor javascript --release v9
-
-# Auto-fix formatting issues (Prettier for YAML/JSON, shfmt for shell)
-npx mega-linter-runner --flavor javascript --release v9 --fix
+npm run lint:mega        # lint changed files (matches CI behaviour)
+npm run lint:mega:fix    # auto-fix formatting issues
 ```
 
 With `--fix`, MegaLinter writes formatting changes directly to your files. Review the diff and commit the results.
