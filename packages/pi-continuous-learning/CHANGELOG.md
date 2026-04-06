@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.12.0...pi-continuous-learning-v0.12.1) (2026-04-06)
+
+
+### Bug Fixes
+
+* Update repo URLs for npm provenance and add manual publish trigger ([#62](https://github.com/MattDevy/pi-extensions/issues/62)) ([c47a728](https://github.com/MattDevy/pi-extensions/commit/c47a728267bef1adac969e225fb4fc26a91ea622))
+
 ## [0.12.0](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.11.0...pi-continuous-learning-v0.12.0) (2026-04-06)
 
 
