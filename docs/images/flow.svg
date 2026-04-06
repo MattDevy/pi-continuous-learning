@@ -114,9 +114,9 @@
 <line x1="544" y1="182" x2="544" y2="258" stroke="#9b9b9b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
 <text class="ts" x="550" y="225" text-anchor="start">creates / updates</text>
 
-<!-- observations → analyzer (scheduled, dashed) -->
-<path d="M110 200 L110 380 Q110 400 130 400 L430 400 Q450 400 450 380 L450 312" fill="none" stroke="#c8c6be" stroke-width="1" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
-<text class="ts" x="280" y="418" text-anchor="middle">scheduled cron / launchd</text>
+<!-- Pi session → background analyzer (scheduled, dashed) -->
+<path d="M110 200 L110 370 Q110 390 130 390 L425 390 Q435 390 435 375 L435 218" fill="none" stroke="#c8c6be" stroke-width="1" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+<text class="ts" x="270" y="408" text-anchor="middle">scheduled cron / launchd</text>
 
 <!-- instinct files → system prompt injection (routes through gap between containers) -->
 <path d="M448 286 L415 286 L415 174 L370 174" fill="none" stroke="#6b6b6b" stroke-width="1.5" marker-end="url(#arrow)"/>
