@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.11.0...pi-continuous-learning-v0.12.0) (2026-04-06)
+
+
+### Features
+
+* Generate INSTINCT_SUMMARY.md after analyzer runs and tool operations ([#60](https://github.com/MattDevy/pi-extensions/issues/60)) ([37bebb8](https://github.com/MattDevy/pi-extensions/commit/37bebb8cf3232a44400c9284218b24351358694f))
+
 ## [0.11.0](https://github.com/MattDevy/pi-continuous-learning/compare/pi-continuous-learning-v0.10.1...pi-continuous-learning-v0.11.0) (2026-04-06)
 
 
