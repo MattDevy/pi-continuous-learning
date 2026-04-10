@@ -11,33 +11,20 @@ export function buildTddInjectionBlock(
 ): string | null {
   if (config.injection_mode === "off") return null;
 
-  // In active-only mode, only inject when TDD is active (non-idle)
-  if (config.injection_mode === "active-only" && state.phase === "idle") {
-    return null;
-  }
-
-  // In nudge mode with idle state, inject gentle reminder
-  if (config.injection_mode === "nudge" && state.phase === "idle") {
-    return `\n\n${getNudgePrompt()}`;
-  }
-
-  // In always mode with idle state, inject nudge
-  if (config.injection_mode === "always" && state.phase === "idle") {
+  if (state.phase === "idle") {
+    if (config.injection_mode === "active-only") return null;
     return `\n\n${getNudgePrompt()}`;
   }
 
   const parts: string[] = [];
 
-  // Phase-specific prompt
   const phasePrompt = getPhasePrompt(state);
   if (phasePrompt) parts.push(phasePrompt);
 
-  // Staleness warning
   if (isTestRunStale(state)) {
     parts.push(getStaleTestWarning());
   }
 
-  // Ordering warning
   const orderingWarning = getFileOrderingWarning(state, config.ordering_enforcement);
   if (orderingWarning) parts.push(orderingWarning);
 
@@ -72,7 +59,6 @@ function getFileOrderingWarning(
   if (enforcement === "off") return null;
   if (state.phase !== "red") return null;
 
-  // Warn if impl files were edited before any test files
   if (state.impl_files.length > 0 && state.test_files.length === 0) {
     return getOrderingWarning(enforcement);
   }

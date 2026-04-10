@@ -1,5 +1,4 @@
 import {
-  existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
@@ -22,27 +21,16 @@ export function getHistoryPath(baseDir = getBaseDir()): string {
   return join(baseDir, "history.jsonl");
 }
 
-export function getConfigPath(baseDir = getBaseDir()): string {
-  return join(baseDir, "config.json");
-}
-
 export function ensureStorageLayout(baseDir = getBaseDir()): void {
-  if (!existsSync(baseDir)) {
-    mkdirSync(baseDir, { recursive: true });
-  }
+  mkdirSync(baseDir, { recursive: true });
 }
 
 export function loadState(baseDir = getBaseDir()): TddState | null {
   const statePath = getStatePath(baseDir);
-  if (!existsSync(statePath)) {
-    return null;
-  }
-
   try {
     const raw = readFileSync(statePath, "utf-8");
     return JSON.parse(raw) as TddState;
   } catch {
-    console.warn("[pi-red-green] Failed to load state.json, starting fresh");
     return null;
   }
 }
@@ -54,8 +42,10 @@ export function saveState(state: TddState, baseDir = getBaseDir()): void {
 
 export function clearState(baseDir = getBaseDir()): void {
   const statePath = getStatePath(baseDir);
-  if (existsSync(statePath)) {
+  try {
     unlinkSync(statePath);
+  } catch {
+    // Already absent
   }
 }
 

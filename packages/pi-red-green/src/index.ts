@@ -10,6 +10,7 @@ import { classifyFile } from "./file-classifier.js";
 import { isTestRunCommand, parseTestRunResult } from "./test-run-detector.js";
 import {
   handleBeforeAgentStart as buildInjection,
+  type BeforeAgentStartEvent,
 } from "./tdd-injector.js";
 import { updateStatusBar } from "./status-bar.js";
 import { handleTddCommand, COMMAND_NAME as TDD_CMD } from "./tdd-command.js";
@@ -25,7 +26,6 @@ export default function (pi: ExtensionAPI): void {
   let config: TddConfig | null = null;
   let state: TddState | null = null;
 
-  // Shared accessors for commands/tools to read and write state
   const stateRef = {
     get: (): TddState | null => state,
     set: (s: TddState) => {
@@ -62,7 +62,7 @@ export default function (pi: ExtensionAPI): void {
     try {
       if (!state || !config) return;
       return buildInjection(
-        event as { type: "before_agent_start"; prompt: string; systemPrompt: string },
+        event as BeforeAgentStartEvent,
         state,
         config,
       ) ?? undefined;
@@ -83,7 +83,6 @@ export default function (pi: ExtensionAPI): void {
         isError: boolean;
       };
 
-      // Classify file edits
       if (toolName === "Write" || toolName === "Edit") {
         const filePath = extractFilePath(result);
         if (filePath) {
@@ -99,7 +98,6 @@ export default function (pi: ExtensionAPI): void {
         }
       }
 
-      // Detect test runs
       if (toolName === "Bash" && !isError) {
         const { stdout, stderr, exitCode, command } = extractBashResult(result);
         if (command && isTestRunCommand(command, config)) {
@@ -111,7 +109,6 @@ export default function (pi: ExtensionAPI): void {
             };
             state = { ...state, last_test_run: updatedResult };
 
-            // Auto-advance if enabled
             if (config.auto_advance) {
               const trigger =
                 updatedResult.errors > 0
@@ -148,7 +145,7 @@ export default function (pi: ExtensionAPI): void {
 
   pi.on("turn_end", (_event, _ctx) => {
     try {
-      if (!state) return;
+      if (!state || state.phase === "idle") return;
       state = { ...state, current_turn_index: state.current_turn_index + 1 };
       saveState(state);
     } catch (err) {
@@ -169,10 +166,11 @@ export default function (pi: ExtensionAPI): void {
   });
 }
 
+const FILE_PATH_RE = /(?:File|file|path)[:\s]+(\S+)/;
+
 function extractFilePath(result: unknown): string | null {
   if (typeof result === "string") {
-    // Try to extract file path from tool result text
-    const match = result.match(/(?:File|file|path)[:\s]+(\S+)/);
+    const match = result.match(FILE_PATH_RE);
     return match?.[1] ?? null;
   }
   if (result && typeof result === "object") {

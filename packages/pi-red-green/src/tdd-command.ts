@@ -1,8 +1,7 @@
 import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import { createInitialState, createIdleState } from "./state-machine.js";
 import { saveState, clearState, appendCycleRecord } from "./storage.js";
-import { updateStatusBar, clearStatusBar } from "./status-bar.js";
-import { formatStatusText } from "./status-bar.js";
+import { updateStatusBar, clearStatusBar, formatStatusText } from "./status-bar.js";
 import type { TddState, TddConfig, TddCycleRecord } from "./types.js";
 
 export const COMMAND_NAME = "tdd";
@@ -77,7 +76,7 @@ function deactivate(ctx: ExtensionCommandContext, stateRef: StateRef): void {
   ctx.ui.notify("TDD deactivated.", "info");
 }
 
-function recordCycle(state: TddState): void {
+export function recordCycle(state: TddState): void {
   const record: TddCycleRecord = {
     task: state.task,
     session_id: state.session_id,

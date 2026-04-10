@@ -1,12 +1,24 @@
 import type { TddConfig, TestRunResult } from "./types.js";
 
+let cachedLowerPatterns: readonly string[] | null = null;
+let cachedPatternSource: readonly string[] | null = null;
+
+function getLowerPatterns(patterns: readonly string[]): readonly string[] {
+  if (cachedPatternSource === patterns && cachedLowerPatterns) {
+    return cachedLowerPatterns;
+  }
+  cachedLowerPatterns = patterns.map((p) => p.toLowerCase());
+  cachedPatternSource = patterns;
+  return cachedLowerPatterns;
+}
+
 export function isTestRunCommand(
   command: string,
   config: TddConfig,
 ): boolean {
   const normalized = command.trim().toLowerCase();
-  return config.test_runner_patterns.some((pattern) =>
-    normalized.includes(pattern.toLowerCase()),
+  return getLowerPatterns(config.test_runner_patterns).some((pattern) =>
+    normalized.includes(pattern),
   );
 }
 

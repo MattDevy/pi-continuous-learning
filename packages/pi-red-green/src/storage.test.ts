@@ -6,7 +6,6 @@ import {
   getBaseDir,
   getStatePath,
   getHistoryPath,
-  getConfigPath,
   ensureStorageLayout,
   loadState,
   saveState,
@@ -39,10 +38,6 @@ describe("path helpers", () => {
     expect(p).toBe(join(tmpBase, "history.jsonl"));
   });
 
-  it("getConfigPath returns config.json under base", () => {
-    const p = getConfigPath(tmpBase);
-    expect(p).toBe(join(tmpBase, "config.json"));
-  });
 });
 
 describe("ensureStorageLayout", () => {

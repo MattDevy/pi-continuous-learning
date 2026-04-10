@@ -1,10 +1,9 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import type { StateRef } from "./tdd-command.js";
+import { type StateRef, recordCycle } from "./tdd-command.js";
 import { advancePhase, createIdleState } from "./state-machine.js";
-import { saveState, clearState, appendCycleRecord } from "./storage.js";
+import { saveState, clearState } from "./storage.js";
 import { isTestRunStale } from "./tdd-injector.js";
-import type { TddCycleRecord } from "./types.js";
 
 const StatusParams = Type.Object({});
 
@@ -118,18 +117,7 @@ function createResetTool(stateRef: StateRef) {
         };
       }
 
-      const record: TddCycleRecord = {
-        task: state.task,
-        session_id: state.session_id,
-        project_id: state.project_id,
-        started_at: state.started_at,
-        completed_at: new Date().toISOString(),
-        final_phase: state.phase,
-        test_files: state.test_files,
-        impl_files: state.impl_files,
-        phase_history: state.phase_history,
-      };
-      appendCycleRecord(record);
+      recordCycle(state);
 
       const idleState = createIdleState(state.session_id, state.project_id);
       stateRef.set(idleState);

@@ -41,15 +41,12 @@ export function detectLanguage(filePath: string): string | null {
   return null;
 }
 
-function matchesAnyPattern(filePath: string, patterns: readonly string[]): boolean {
-  const normalized = filePath.replace(/\\/g, "/");
-  for (const pattern of patterns) {
-    if (matchGlobSimple(normalized, pattern)) return true;
-  }
-  return false;
-}
+const globRegexCache = new Map<string, RegExp>();
 
-function globToRegex(pattern: string): RegExp {
+function getGlobRegex(pattern: string): RegExp {
+  let cached = globRegexCache.get(pattern);
+  if (cached) return cached;
+
   const escaped = pattern
     .replace(/[.+^${}()|[\]\\]/g, "\\$&")
     .replace(/\*\*\//g, "(__GLOBSTAR__/)?")
@@ -57,11 +54,17 @@ function globToRegex(pattern: string): RegExp {
     .replace(/\*/g, "[^/]*")
     .replace(/__GLOBSTAR__/g, ".*");
 
-  return new RegExp(`(^|/)${escaped}$`);
+  cached = new RegExp(`(^|/)${escaped}$`);
+  globRegexCache.set(pattern, cached);
+  return cached;
 }
 
-function matchGlobSimple(filePath: string, pattern: string): boolean {
-  return globToRegex(pattern).test(filePath);
+function matchesAnyPattern(filePath: string, patterns: readonly string[]): boolean {
+  const normalized = filePath.replace(/\\/g, "/");
+  for (const pattern of patterns) {
+    if (getGlobRegex(pattern).test(normalized)) return true;
+  }
+  return false;
 }
 
 export function classifyFile(
@@ -70,12 +73,10 @@ export function classifyFile(
 ): FileClassification {
   const normalized = filePath.replace(/\\/g, "/");
 
-  // Check for non-source file extensions
   for (const ext of OTHER_EXTENSIONS) {
     if (normalized.toLowerCase().endsWith(ext)) return "other";
   }
 
-  // Check for config/build files by name
   const segments = normalized.split("/");
   const filename = segments[segments.length - 1] ?? "";
   if (isConfigFile(filename)) return "other";
