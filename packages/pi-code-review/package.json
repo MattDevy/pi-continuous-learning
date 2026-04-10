@@ -1,6 +1,6 @@
 {
   "name": "pi-code-review",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Pi extension that provides automated, language-aware code review after the agent writes or modifies files.",
   "type": "module",
   "license": "MIT",
