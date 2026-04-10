@@ -1,6 +1,6 @@
 {
   "name": "pi-simplify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Pi extension that reviews recently changed code for clarity, consistency, and maintainability.",
   "type": "module",
   "license": "MIT",
