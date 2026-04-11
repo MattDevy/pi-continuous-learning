@@ -1,6 +1,6 @@
 {
   "name": "pi-blueprint",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Pi extension that turns high-level objectives into phased, multi-session construction plans with dependency tracking and verification gates.",
   "type": "module",
   "license": "MIT",
