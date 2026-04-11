@@ -14,6 +14,7 @@ A monorepo of [Pi](https://github.com/nicholasgasior/pi-coding-agent) extensions
 | [pi-compass](packages/pi-compass) | Codebase navigation: generates structured codemaps and interactive code tours for faster agent onboarding | [![npm](https://img.shields.io/npm/v/pi-compass)](https://www.npmjs.com/package/pi-compass) |
 | [pi-simplify](packages/pi-simplify) | Code simplification: reviews recently changed files for clarity, consistency, and maintainability | [![npm](https://img.shields.io/npm/v/pi-simplify)](https://www.npmjs.com/package/pi-simplify) |
 | [pi-code-review](packages/pi-code-review) | Automated code review: language-aware review after edits with structured findings | [![npm](https://img.shields.io/npm/v/pi-code-review)](https://www.npmjs.com/package/pi-code-review) |
+| [pi-blueprint](packages/pi-blueprint) | Multi-session planning: turns objectives into phased construction plans with dependency tracking and verification gates | [![npm](https://img.shields.io/npm/v/pi-blueprint)](https://www.npmjs.com/package/pi-blueprint) |
 
 ## Development
 

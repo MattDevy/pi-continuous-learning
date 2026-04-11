@@ -23,6 +23,9 @@ packages/
   pi-code-review/           # Pi extension: automated language-aware code review
     src/                    # TypeScript source + tests (*.test.ts alongside source)
     CHANGELOG.md            # Release history (managed by release-please)
+  pi-blueprint/             # Pi extension: multi-session planning with dependency tracking
+    src/                    # TypeScript source + tests (*.test.ts alongside source)
+    CHANGELOG.md            # Release history (managed by release-please)
 ```
 
 ## Commands (run from repo root)
