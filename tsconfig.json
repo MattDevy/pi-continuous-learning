@@ -6,6 +6,7 @@
     { "path": "packages/pi-red-green" },
     { "path": "packages/pi-compass" },
     { "path": "packages/pi-simplify" },
-    { "path": "packages/pi-code-review" }
+    { "path": "packages/pi-code-review" },
+    { "path": "packages/pi-blueprint" }
   ]
 }
