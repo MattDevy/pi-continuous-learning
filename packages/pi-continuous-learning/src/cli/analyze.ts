@@ -9,7 +9,6 @@ import {
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { AuthStorage } from "@mariozechner/pi-coding-agent";
-import { getModel } from "@mariozechner/pi-ai";
 
 import { loadConfig, DEFAULT_CONFIG } from "../config.js";
 import type { InstalledSkill, ProjectEntry } from "../types.js";
@@ -74,6 +73,7 @@ import {
   type ProjectRunStats,
   type RunSummary,
 } from "./analyze-logger.js";
+import { resolveAnalyzerModel } from "./analyze-model.js";
 
 // ---------------------------------------------------------------------------
 // Lockfile guard - ensures only one instance runs at a time
@@ -400,18 +400,10 @@ async function analyzeProject(
     },
   );
 
-  const authStorage = AuthStorage.create();
-  const modelId = (config.model || DEFAULT_CONFIG.model) as Parameters<
-    typeof getModel
-  >[1];
-  const model = getModel("anthropic", modelId);
-  const apiKey = await authStorage.getApiKey("anthropic");
-
-  if (!apiKey) {
-    throw new Error(
-      "No Anthropic API key configured. Set via auth.json or ANTHROPIC_API_KEY.",
-    );
-  }
+  const { apiKey, model, modelId } = await resolveAnalyzerModel(
+    config,
+    AuthStorage.create(),
+  );
 
   const context = {
     systemPrompt: buildSingleShotSystemPrompt(),
@@ -672,18 +664,10 @@ async function consolidateProject(
     projectId: project.id,
   });
 
-  const authStorage = AuthStorage.create();
-  const modelId = (config.model || DEFAULT_CONFIG.model) as Parameters<
-    typeof getModel
-  >[1];
-  const model = getModel("anthropic", modelId);
-  const apiKey = await authStorage.getApiKey("anthropic");
-
-  if (!apiKey) {
-    throw new Error(
-      "No Anthropic API key configured. Set via auth.json or ANTHROPIC_API_KEY.",
-    );
-  }
+  const { apiKey, model, modelId } = await resolveAnalyzerModel(
+    config,
+    AuthStorage.create(),
+  );
 
   const context = {
     systemPrompt,
