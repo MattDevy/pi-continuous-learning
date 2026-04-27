@@ -230,6 +230,7 @@ async function analyzeProject(
   config: ReturnType<typeof loadConfig>,
   baseDir: string,
   logger: AnalyzeLogger,
+  authStorage: AuthStorage,
 ): Promise<AnalyzeResult> {
   const meta = loadProjectMeta(project.id, baseDir);
 
@@ -402,7 +403,7 @@ async function analyzeProject(
 
   const { apiKey, model, modelId } = await resolveAnalyzerModel(
     config,
-    AuthStorage.create(),
+    authStorage,
   );
 
   const context = {
@@ -587,6 +588,7 @@ async function consolidateProject(
   baseDir: string,
   logger: AnalyzeLogger,
   force: boolean,
+  authStorage: AuthStorage,
 ): Promise<AnalyzeResult> {
   const obsPath = getObservationsPath(project.id, baseDir);
   const sessionCount = countDistinctSessions(obsPath);
@@ -666,7 +668,7 @@ async function consolidateProject(
 
   const { apiKey, model, modelId } = await resolveAnalyzerModel(
     config,
-    AuthStorage.create(),
+    authStorage,
   );
 
   const context = {
@@ -864,6 +866,7 @@ async function main(): Promise<void> {
     let skipped = 0;
     let errored = 0;
     const allProjectStats: ProjectRunStats[] = [];
+    const authStorage = AuthStorage.create();
 
     if (isConsolidateOnly) {
       // --consolidate: manual trigger, consolidation only, skip gates
@@ -875,6 +878,7 @@ async function main(): Promise<void> {
             baseDir,
             logger,
             true,
+            authStorage,
           );
           if (result.ran && result.stats) {
             processed++;
@@ -898,7 +902,7 @@ async function main(): Promise<void> {
       // Normal mode: analyze observations, then opportunistic consolidation
       for (const project of projects) {
         try {
-          const result = await analyzeProject(project, config, baseDir, logger);
+          const result = await analyzeProject(project, config, baseDir, logger, authStorage);
           if (result.ran && result.stats) {
             processed++;
             allProjectStats.push(result.stats);
@@ -928,6 +932,7 @@ async function main(): Promise<void> {
               baseDir,
               logger,
               false,
+              authStorage,
             );
             if (result.ran && result.stats) {
               processed++;
