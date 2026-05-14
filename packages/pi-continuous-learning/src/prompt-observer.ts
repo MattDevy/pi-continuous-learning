@@ -3,7 +3,7 @@
  * Captures before_agent_start (user_prompt) and agent_end events as JSONL observations.
  */
 
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 // Local event type definitions (not all pi-coding-agent versions re-export these at top level)
 export interface BeforeAgentStartEvent {

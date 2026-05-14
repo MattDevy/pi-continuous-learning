@@ -5,8 +5,8 @@
  * The model receives all current instincts inline and returns a JSON change-set.
  * Changes are applied client-side, eliminating the ~16x cache-read multiplier.
  */
-import type { AssistantMessage, Context } from "@mariozechner/pi-ai";
-import { complete } from "@mariozechner/pi-ai";
+import type { AssistantMessage, Context } from "@earendil-works/pi-ai";
+import { complete } from "@earendil-works/pi-ai";
 import type { Instinct } from "../types.js";
 import { serializeInstinct } from "../instinct-parser.js";
 

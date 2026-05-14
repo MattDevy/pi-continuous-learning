@@ -4,7 +4,7 @@
  * trend arrows, and feedback ratios.
  */
 
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { Instinct, Fact } from "./types.js";
 import { loadProjectInstincts, loadGlobalInstincts } from "./instinct-store.js";
 import { loadProjectFacts, loadGlobalFacts } from "./fact-store.js";

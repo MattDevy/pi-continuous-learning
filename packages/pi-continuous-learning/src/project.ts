@@ -5,7 +5,7 @@
 
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ProjectEntry } from "./types.js";
 
 const GLOBAL_PROJECT_ID = "global";

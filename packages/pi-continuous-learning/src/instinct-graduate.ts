@@ -13,7 +13,7 @@ import { writeFileSync, mkdirSync } from "node:fs";
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import type { Instinct } from "./types.js";
 import {
   getBaseDir,

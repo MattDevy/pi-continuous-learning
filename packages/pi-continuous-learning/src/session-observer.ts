@@ -1,4 +1,4 @@
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { getCurrentActiveInstincts } from "./active-instincts.js";
 import { appendObservation } from "./observations.js";

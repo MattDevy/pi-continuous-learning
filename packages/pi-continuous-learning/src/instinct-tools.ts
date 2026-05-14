@@ -1,6 +1,5 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Type, type Static } from "@sinclair/typebox";
-import { StringEnum } from "@mariozechner/pi-ai";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type, type Static, StringEnum } from "@earendil-works/pi-ai";
 import { unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import type { Instinct } from "./types.js";

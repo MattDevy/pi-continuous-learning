@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { COMMAND_NAME as STATUS_CMD } from "./instinct-status.js";
 import { COMMAND_NAME as EXPORT_CMD } from "./instinct-export.js";
 import { COMMAND_NAME as IMPORT_CMD } from "./instinct-import.js";

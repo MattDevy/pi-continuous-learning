@@ -15,7 +15,7 @@ import {
   clearActiveInstincts,
 } from "./active-instincts.js";
 import type { Instinct, Config } from "./types.js";
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type {
   BeforeAgentStartEvent,
   AgentEndEvent,

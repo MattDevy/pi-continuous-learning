@@ -1,11 +1,11 @@
-import type { AuthStorage } from "@mariozechner/pi-coding-agent";
+import type { AuthStorage } from "@earendil-works/pi-coding-agent";
 import {
   getModel,
   getProviders,
   type Api,
   type KnownProvider,
   type Model,
-} from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-ai";
 import type { Config } from "../types.js";
 
 type AnalyzerAuthStorage = Pick<AuthStorage, "getApiKey">;
