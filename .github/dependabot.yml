@@ -13,26 +13,17 @@ updates:
       day: "monday"
     open-pull-requests-limit: 10
     groups:
-      # Group all production dependencies together
-      production-dependencies:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "@types/*"
-          - "eslint*"
-          - "prettier"
-        update-types:
-          - "minor"
-          - "patch"
-
-      # Separate group for dev dependencies
       development-dependencies:
         patterns:
           - "@types/*"
+          - "@eslint/*"
+          - "@typescript-eslint/*"
           - "eslint*"
           - "prettier"
-          - "jest"
+          - "vitest*"
           - "typescript"
+          - "globals"
+        dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
