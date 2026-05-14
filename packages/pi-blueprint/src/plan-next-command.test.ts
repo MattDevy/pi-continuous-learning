@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { handlePlanNextCommand } from "./plan-next-command.js";
 import type { StateRef, BlueprintExtensionState, Phase, Task } from "./types.js";
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { handlePlanVerifyCommand } from "./plan-verify-command.js";
 import type { StateRef, BlueprintExtensionState, Phase, Task, VerificationGate } from "./types.js";
 

@@ -1,4 +1,4 @@
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { StateRef } from "./types.js";
 import { isTaskDone } from "./types.js";
 import { renderPlanMarkdown } from "./plan-renderer.js";

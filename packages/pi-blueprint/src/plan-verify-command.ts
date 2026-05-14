@@ -1,4 +1,4 @@
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { StateRef } from "./types.js";
 import { verifyGate, advancePhase } from "./state-machine.js";
 import { runGate } from "./verification.js";

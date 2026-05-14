@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import type { StateRef } from "./types.js";
 import { renderPlanMarkdown } from "./plan-renderer.js";
 import { getBlueprintGeneratePrompt } from "./prompts/blueprint-generate.js";

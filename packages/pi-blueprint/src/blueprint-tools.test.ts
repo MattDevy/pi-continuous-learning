@@ -76,7 +76,7 @@ describe("registerBlueprintTools", () => {
       get: () => state,
       set: (s) => { state = s; },
     };
-    registerBlueprintTools(pi as unknown as import("@mariozechner/pi-coding-agent").ExtensionAPI, stateRef);
+    registerBlueprintTools(pi as unknown as import("@earendil-works/pi-coding-agent").ExtensionAPI, stateRef);
   });
 
   it("registers 4 tools", () => {
