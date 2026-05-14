@@ -1,3 +1,5 @@
+![pi-continuous-learning banner](docs/images/banner.png)
+
 # pi-continuous-learning
 
 > A [Pi](https://github.com/nicholasgasior/pi-coding-agent) extension that watches your coding sessions and distils patterns into reusable **instincts** — atomic learned behaviours with confidence scoring, project scoping, and closed-loop feedback validation.
@@ -5,10 +7,6 @@
 [![CI](https://github.com/MattDevy/pi-continuous-learning/workflows/CI/badge.svg)](https://github.com/MattDevy/pi-continuous-learning/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/pi-continuous-learning)](https://www.npmjs.com/package/pi-continuous-learning)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-<!-- markdownlint-disable MD033 -->
-<a href="https://www.buymeacoffee.com/MattDevy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-red.png" alt="Buy Me A Coffee" width="150"></a>
-<!-- markdownlint-enable MD033 -->
 
 Inspired by [everything-claude-code/continuous-learning-v2](https://github.com/nicholasb/everything-claude-code), reimplemented as a native Pi extension in TypeScript.
 
