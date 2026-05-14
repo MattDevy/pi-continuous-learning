@@ -8,7 +8,7 @@
 
 import { readFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { Instinct } from "./types.js";
 import { saveInstinct, listInstincts } from "./instinct-store.js";
 import {

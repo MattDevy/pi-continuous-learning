@@ -28,7 +28,7 @@ import {
   autoPromoteInstincts,
   handleInstinctPromote,
 } from "./instinct-promote.js";
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 // ---------------------------------------------------------------------------
 // Helpers

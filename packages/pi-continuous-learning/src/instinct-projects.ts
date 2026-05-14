@@ -4,7 +4,7 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import type { ProjectEntry } from "./types.js";
 import {
   getProjectsRegistryPath,

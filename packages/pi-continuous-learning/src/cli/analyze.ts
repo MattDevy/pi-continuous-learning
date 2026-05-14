@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { AuthStorage } from "@mariozechner/pi-coding-agent";
+import { AuthStorage } from "@earendil-works/pi-coding-agent";
 
 import { loadConfig, DEFAULT_CONFIG } from "../config.js";
 import type { InstalledSkill, ProjectEntry } from "../types.js";
@@ -325,8 +325,8 @@ async function analyzeProject(
 
   let installedSkills: InstalledSkill[] = [];
   try {
-    const { loadSkills } = await import("@mariozechner/pi-coding-agent");
-    const result = loadSkills({ cwd: project.root });
+    const { loadSkills, getAgentDir } = await import("@earendil-works/pi-coding-agent");
+    const result = loadSkills({ cwd: project.root, agentDir: getAgentDir(), skillPaths: [], includeDefaults: true });
     installedSkills = result.skills.map(
       (s: { name: string; description: string }) => ({
         name: s.name,
@@ -645,8 +645,8 @@ async function consolidateProject(
 
   let installedSkills: InstalledSkill[] = [];
   try {
-    const { loadSkills } = await import("@mariozechner/pi-coding-agent");
-    const result = loadSkills({ cwd: project.root });
+    const { loadSkills, getAgentDir } = await import("@earendil-works/pi-coding-agent");
+    const result = loadSkills({ cwd: project.root, agentDir: getAgentDir(), skillPaths: [], includeDefaults: true });
     installedSkills = result.skills.map(
       (s: { name: string; description: string }) => ({
         name: s.name,

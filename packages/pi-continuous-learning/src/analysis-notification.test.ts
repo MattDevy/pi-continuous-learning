@@ -10,7 +10,7 @@ import {
   appendAnalysisEvent,
   type AnalysisEvent,
 } from "./analysis-event-log.js";
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,6 +38,11 @@ function makeMockCtx(): ExtensionContext {
       onTerminalInput: vi.fn(),
       setStatus: vi.fn(),
       setWorkingMessage: vi.fn(),
+      setWorkingVisible: vi.fn(),
+      setWorkingIndicator: vi.fn(),
+      setHiddenThinkingLabel: vi.fn(),
+      addAutocompleteProvider: vi.fn(),
+      getEditorComponent: vi.fn(),
       setWidget: vi.fn(),
       setFooter: vi.fn(),
       setHeader: vi.fn(),
@@ -63,6 +68,7 @@ function makeMockCtx(): ExtensionContext {
     modelRegistry: {} as unknown as ExtensionContext["modelRegistry"],
     model: undefined,
     isIdle: vi.fn(),
+    signal: undefined,
     abort: vi.fn(),
     hasPendingMessages: vi.fn(),
     shutdown: vi.fn(),

@@ -37,7 +37,7 @@ function makeCtx(sessionId = "test-session-014") {
       contextWindow: 200000,
       percent: 0.5,
     }),
-  } as unknown as import("@mariozechner/pi-coding-agent").ExtensionContext;
+  } as unknown as import("@earendil-works/pi-coding-agent").ExtensionContext;
 }
 
 function makePromptEvent(prompt: string): BeforeAgentStartEvent {

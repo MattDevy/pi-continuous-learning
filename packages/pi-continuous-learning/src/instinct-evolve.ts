@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import type { InstalledSkill } from "./types.js";
 import { homedir } from "node:os";
 import { join } from "node:path";

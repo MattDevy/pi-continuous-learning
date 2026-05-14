@@ -34,7 +34,7 @@ function makeCtx(sessionId = "test-session-001") {
     sessionManager: {
       getSessionId: () => sessionId,
     },
-  } as unknown as import("@mariozechner/pi-coding-agent").ExtensionContext;
+  } as unknown as import("@earendil-works/pi-coding-agent").ExtensionContext;
 }
 
 function makeStartEvent(

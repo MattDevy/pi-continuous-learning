@@ -9,8 +9,8 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
-import { loadSkills } from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
+import { loadSkills, getAgentDir } from "@earendil-works/pi-coding-agent";
 
 import { loadConfig } from "./config.js";
 import { detectProject } from "./project.js";
@@ -80,7 +80,7 @@ export default function (pi: ExtensionAPI): void {
       cleanOldArchives(project.id);
 
       try {
-        const result = loadSkills({ cwd: ctx.cwd });
+        const result = loadSkills({ cwd: ctx.cwd, agentDir: getAgentDir(), skillPaths: [], includeDefaults: true });
         installedSkills = result.skills.map((s) => ({
           name: s.name,
           description: s.description,

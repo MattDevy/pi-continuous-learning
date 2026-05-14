@@ -5,7 +5,7 @@
  * Also bridges injected instinct IDs to shared active-instincts state (US-023).
  */
 
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type {
   BeforeAgentStartEvent,
   AgentEndEvent,

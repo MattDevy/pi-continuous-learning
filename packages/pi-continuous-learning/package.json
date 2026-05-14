@@ -61,9 +61,9 @@
     "prepack": "test -d dist || { echo 'Error: dist/ missing. Run npm run build first.' && exit 1; }"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.62.0",
-    "@mariozechner/pi-ai": "^0.62.0",
-    "@mariozechner/pi-tui": "^0.62.0",
+    "@earendil-works/pi-coding-agent": "^0.74.0",
+    "@earendil-works/pi-ai": "^0.74.0",
+    "@earendil-works/pi-tui": "^0.74.0",
     "@sinclair/typebox": "^0.34.0"
   },
   "devDependencies": {
