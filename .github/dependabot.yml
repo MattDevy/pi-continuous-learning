@@ -24,7 +24,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
+
       # Separate group for dev dependencies
       development-dependencies:
         patterns:
@@ -36,7 +36,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
+
       # Critical security updates always get their own PR
       security-updates:
         patterns:
