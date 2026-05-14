@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterAll } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { registerOnboardTools } from "./onboard-tools.js";
 import type { StateRef } from "./types.js";
 import type { CompassState, CodeMap, CacheEntry } from "./types.js";

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { detectProject } from "./project.js";
 
 function makeMockPi(execResults: Record<string, { code: number; stdout: string; stderr: string }>): ExtensionAPI {

@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { detectAvailableTopics, getOrGenerateTour, formatTourMarkdown } from "./tour-generator.js";
 import type { StateRef } from "./types.js";
 import { getOrGenerateCodemap } from "./codemap-generator.js";
