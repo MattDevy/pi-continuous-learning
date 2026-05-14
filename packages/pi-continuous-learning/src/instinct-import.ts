@@ -99,6 +99,7 @@ export function loadImportFile(filePath: string): LoadResult {
   } catch (err) {
     throw new Error(
       `Import file contains invalid JSON: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 

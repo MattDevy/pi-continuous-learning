@@ -65,6 +65,7 @@ export function parseChanges(raw: string): InstinctChange[] {
   } catch (e) {
     throw new Error(
       `Analyzer returned invalid JSON: ${String(e)}\nRaw: ${raw.slice(0, 200)}`,
+      { cause: e },
     );
   }
 
