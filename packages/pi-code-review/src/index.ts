@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { createEditTracker } from "./edit-tracker.js";
 import {
   handleBeforeAgentStart,

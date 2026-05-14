@@ -1,8 +1,8 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
-import { complete, getModel } from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-coding-agent";
+import { complete, getModel } from "@earendil-works/pi-ai";
 import { detectLanguage } from "./language-detector.js";
 import { buildReviewPrompt, buildFallbackPrompt } from "./review-prompt.js";
 import { parseReviewFindings, formatFindings } from "./review-parser.js";
