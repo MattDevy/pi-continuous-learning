@@ -1,6 +1,6 @@
 {
   "name": "pi-red-green",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A Pi extension that enforces Test-Driven Development (RED-GREEN-REFACTOR) discipline during agent coding sessions.",
   "type": "module",
   "license": "MIT",

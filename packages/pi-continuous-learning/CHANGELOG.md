@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.0...pi-continuous-learning-v0.14.1) (2026-05-14)
+
+
+### Bug Fixes
+
+* **deps:** Migrate to [@earendil-works](https://github.com/earendil-works) namespace ([6f63ca5](https://github.com/MattDevy/pi-extensions/commit/6f63ca5a979dd79a1a4597f01018691f93133dae))
+
 ## [0.14.0](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.13.2...pi-continuous-learning-v0.14.0) (2026-04-27)
 
 

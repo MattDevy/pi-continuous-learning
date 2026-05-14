@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/MattDevy/pi-extensions/compare/pi-red-green-v0.2.1...pi-red-green-v0.2.2) (2026-05-14)
+
+
+### Bug Fixes
+
+* **deps:** Migrate to [@earendil-works](https://github.com/earendil-works) namespace ([34e8f38](https://github.com/MattDevy/pi-extensions/commit/34e8f38f86330b7dc46b6518b62dd8dd25e407d2))
+
 ## [0.2.1](https://github.com/MattDevy/pi-extensions/compare/pi-red-green-v0.2.0...pi-red-green-v0.2.1) (2026-04-10)
 
 
