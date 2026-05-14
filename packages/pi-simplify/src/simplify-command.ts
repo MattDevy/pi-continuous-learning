@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { getChangedFiles } from "./git-diff.js";
 import { buildSimplifyPrompt } from "./prompt-builder.js";
 import type { SimplifyOptions } from "./types.js";

@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { handleSimplifyCommand, COMMAND_NAME } from "./simplify-command.js";
 
 export default function (pi: ExtensionAPI): void {

@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ChangedFile, SimplifyOptions } from "./types.js";
 
 const STATUS_MAP: Record<string, ChangedFile["status"]> = {
