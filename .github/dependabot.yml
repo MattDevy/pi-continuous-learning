@@ -37,12 +37,5 @@ updates:
           - "minor"
           - "patch"
 
-      # Critical security updates always get their own PR
-      security-updates:
-        patterns:
-          - "*"
-        update-types:
-          - "security"
-
     # Important: Enable versioning strategy
     versioning-strategy: increase
