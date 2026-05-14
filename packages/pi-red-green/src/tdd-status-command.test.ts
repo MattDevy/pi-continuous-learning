@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
+import type { ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { handleTddStatusCommand } from "./tdd-status-command.js";
 import { createInitialState, createIdleState } from "./state-machine.js";
 import type { TddState, TddConfig } from "./types.js";

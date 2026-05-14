@@ -1,7 +1,7 @@
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import { createInitialState, createIdleState } from "./state-machine.js";
 import { saveState, clearState, appendCycleRecord } from "./storage.js";
 import { updateStatusBar, clearStatusBar, formatStatusText } from "./status-bar.js";

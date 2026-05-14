@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
 import { type StateRef, recordCycle } from "./tdd-command.js";
 import { advancePhase, createIdleState } from "./state-machine.js";
