@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/MattDevy/pi-extensions/compare/pi-simplify-v0.2.1...pi-simplify-v0.2.2) (2026-05-24)
+
+
+### Bug Fixes
+
+* **pi-simplify:** Widen peer ranges to allow 0.75.x ([#127](https://github.com/MattDevy/pi-extensions/issues/127)) ([de2757a](https://github.com/MattDevy/pi-extensions/commit/de2757acba374892c9fc59dba9e40ffe0bb65d7e))
+
 ## [0.2.1](https://github.com/MattDevy/pi-extensions/compare/pi-simplify-v0.2.0...pi-simplify-v0.2.1) (2026-05-14)
 
 
