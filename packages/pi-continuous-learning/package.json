@@ -1,6 +1,6 @@
 {
   "name": "pi-continuous-learning",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "description": "A Pi extension that observes coding sessions and distills patterns into reusable instincts.",
   "type": "module",
   "license": "MIT",
@@ -67,15 +67,15 @@
     "@sinclair/typebox": "^0.34.0"
   },
   "devDependencies": {
-    "@types/node": "^25.7.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@types/node": "^25.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
     "@typescript-eslint/parser": "^8.0.0",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   },
   "optionalDependencies": {
     "@esbuild/linux-x64": "0.28.0",
-    "@rollup/rollup-linux-x64-gnu": "4.60.3"
+    "@rollup/rollup-linux-x64-gnu": "4.61.0"
   }
 }

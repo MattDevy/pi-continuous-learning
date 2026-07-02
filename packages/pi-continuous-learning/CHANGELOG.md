@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.1...pi-continuous-learning-v0.14.2) (2026-05-14)
+
+
+### Bug Fixes
+
+* **lint:** Attach cause to re-thrown JSON parse errors ([#122](https://github.com/MattDevy/pi-extensions/issues/122)) ([cfb58b9](https://github.com/MattDevy/pi-extensions/commit/cfb58b984cb29f97dd2f6806a1161931137d28d4))
+
 ## [0.14.1](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.0...pi-continuous-learning-v0.14.1) (2026-05-14)
 
 
