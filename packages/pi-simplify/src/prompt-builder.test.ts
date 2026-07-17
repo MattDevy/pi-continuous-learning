@@ -27,6 +27,18 @@ describe("buildSimplifyPrompt", () => {
     expect(prompt).toMatch(/clarity/i);
   });
 
+  it("preserves valuable comments while allowing redundant noise to be removed", () => {
+    const prompt = buildSimplifyPrompt(files);
+
+    expect(prompt).toMatch(/keep valuable comments/i);
+    expect(prompt).toMatch(/design rationale/i);
+    expect(prompt).toMatch(/business rules/i);
+    expect(prompt).toMatch(/non-obvious behaviour/i);
+    expect(prompt).toMatch(/intent/i);
+    expect(prompt).toMatch(/remove only truly redundant noise/i);
+    expect(prompt).not.toMatch(/remove unnecessary comments/i);
+  });
+
   it("includes balance principle", () => {
     const prompt = buildSimplifyPrompt(files);
 
