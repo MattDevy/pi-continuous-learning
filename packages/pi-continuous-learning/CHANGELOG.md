@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.2...pi-continuous-learning-v0.14.3) (2026-07-17)
+
+
+### Bug Fixes
+
+* **pi-continuous-learning:** Support custom analyzer providers ([#154](https://github.com/MattDevy/pi-extensions/issues/154)) ([7312fa5](https://github.com/MattDevy/pi-extensions/commit/7312fa5278bed468bdbe277df2895b73667b31f4)), closes [#134](https://github.com/MattDevy/pi-extensions/issues/134)
+
 ## [0.14.2](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.1...pi-continuous-learning-v0.14.2) (2026-05-14)
 
 
