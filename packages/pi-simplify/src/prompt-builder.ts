@@ -24,7 +24,7 @@ export function buildSimplifyPrompt(files: readonly ChangedFile[]): string {
 
 - **Preserve functionality**: Never change what the code does. All existing tests must continue to pass.
 - **Apply project standards**: Follow any conventions from CLAUDE.md or AGENTS.md in this project.
-- **Enhance clarity**: Reduce unnecessary complexity and nesting, eliminate redundant code and abstractions, improve variable and function names, consolidate related logic, remove unnecessary comments that describe obvious code. Avoid nested ternary operators: prefer switch statements or if/else chains for multiple conditions.
+- **Enhance clarity**: Reduce unnecessary complexity and nesting, eliminate redundant code and abstractions, improve variable and function names, and consolidate related logic. Keep valuable comments that explain design rationale, business rules, non-obvious behaviour, or intent. Remove only truly redundant noise, such as \`// increment i\` above \`i++\`. Avoid nested ternary operators: prefer switch statements or if/else chains for multiple conditions.
 - **Maintain balance**: Do not over-simplify. Avoid overly clever solutions that are hard to understand. Do not combine too many concerns into single functions. Do not remove helpful abstractions. Prioritize readability over fewer lines.
 
 ## Scope
