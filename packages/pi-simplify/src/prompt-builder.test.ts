@@ -27,6 +27,18 @@ describe("buildSimplifyPrompt", () => {
     expect(prompt).toMatch(/clarity/i);
   });
 
+  it("preserves valuable comments while allowing redundant noise to be removed", () => {
+    const prompt = buildSimplifyPrompt(files);
+
+    expect(prompt).toMatch(/keep valuable comments/i);
+    expect(prompt).toMatch(/design rationale/i);
+    expect(prompt).toMatch(/business rules/i);
+    expect(prompt).toMatch(/non-obvious behaviour/i);
+    expect(prompt).toMatch(/intent/i);
+    expect(prompt).toMatch(/remove only truly redundant noise/i);
+    expect(prompt).not.toMatch(/remove unnecessary comments/i);
+  });
+
   it("includes balance principle", () => {
     const prompt = buildSimplifyPrompt(files);
 
@@ -55,5 +67,46 @@ describe("buildSimplifyPrompt", () => {
     const prompt = buildSimplifyPrompt(files);
 
     expect(prompt).toMatch(/only.*review|do not.*outside/i);
+  });
+
+  it("restricts modified files to their changed line ranges", () => {
+    const prompt = buildSimplifyPrompt([{
+      path: "src/Foo.java",
+      status: "modified",
+      changedLines: [{ start: 100, end: 120 }, { start: 150, end: 150 }],
+    }]);
+
+    expect(prompt).toContain("changed lines: 100-120, 150");
+    expect(prompt).toMatch(/must not\s+edit/i);
+    expect(prompt).toMatch(/outside the listed\s+line ranges/i);
+  });
+
+  it("marks added files as entirely in scope", () => {
+    const prompt = buildSimplifyPrompt([{
+      path: "src/new.ts",
+      status: "added",
+    }]);
+
+    expect(prompt).toContain("entire file is in scope");
+  });
+
+  it("marks deletion-only files as having no lines to simplify", () => {
+    const prompt = buildSimplifyPrompt([{
+      path: "src/foo.ts",
+      status: "modified",
+      changedLines: [],
+    }]);
+
+    expect(prompt).toContain("deletions only");
+  });
+
+  it("does not grant whole-file scope when changed lines are unavailable", () => {
+    const prompt = buildSimplifyPrompt([{
+      path: "src/foo.ts",
+      status: "modified",
+    }]);
+
+    expect(prompt).toContain("changed lines unavailable");
+    expect(prompt).toContain("inspect git diff before editing");
   });
 });

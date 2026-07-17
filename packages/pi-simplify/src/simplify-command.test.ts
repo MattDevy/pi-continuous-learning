@@ -110,7 +110,7 @@ describe("handleSimplifyCommand", () => {
 
     await handleSimplifyCommand("src/a.ts src/b.ts", ctx, pi);
 
-    expect(pi.exec).not.toHaveBeenCalled();
+    expect(pi.exec).toHaveBeenCalledTimes(2);
     expect(pi.sendUserMessage).toHaveBeenCalledOnce();
     const prompt = (pi.sendUserMessage as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
     expect(prompt).toContain("src/a.ts");
