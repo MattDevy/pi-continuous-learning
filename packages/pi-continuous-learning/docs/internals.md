@@ -170,10 +170,11 @@ instinct-decay.ts  -- apply passive confidence decay (-0.05/week) after cleanup
 Resolve analyzer provider/model from config:
   - provider: anthropic (configurable)
   - model: claude-haiku-4-5 (configurable)
-  - credentials: existing Pi auth for that provider
+  - registry: Pi's ModelRegistry, including custom providers from ~/.pi/agent/models.json
+  - credentials and request headers: existing Pi auth or models.json configuration for that provider
   |
   v
-runSingleShot(context, model, apiKey)  -- sends observations + project context to the configured model
+runSingleShot(context, model, apiKey, signal, headers)  -- sends observations + project context to the configured model
   |
   v
 Model analyzes patterns and returns structured instinct changes

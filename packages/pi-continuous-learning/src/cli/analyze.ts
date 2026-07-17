@@ -8,7 +8,10 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { AuthStorage } from "@earendil-works/pi-coding-agent";
+import {
+  AuthStorage,
+  ModelRegistry,
+} from "@earendil-works/pi-coding-agent";
 
 import { loadConfig, DEFAULT_CONFIG } from "../config.js";
 import type { InstalledSkill, ProjectEntry } from "../types.js";
@@ -230,7 +233,7 @@ async function analyzeProject(
   config: ReturnType<typeof loadConfig>,
   baseDir: string,
   logger: AnalyzeLogger,
-  authStorage: AuthStorage,
+  modelRegistry: ModelRegistry,
 ): Promise<AnalyzeResult> {
   const meta = loadProjectMeta(project.id, baseDir);
 
@@ -401,9 +404,9 @@ async function analyzeProject(
     },
   );
 
-  const { apiKey, model, modelId } = await resolveAnalyzerModel(
+  const { apiKey, model, modelId, headers } = await resolveAnalyzerModel(
     config,
-    authStorage,
+    modelRegistry,
   );
 
   const context = {
@@ -440,6 +443,7 @@ async function analyzeProject(
       model,
       apiKey,
       abortController.signal,
+      headers,
     );
     singleShotMessage = result.message;
 
@@ -588,7 +592,7 @@ async function consolidateProject(
   baseDir: string,
   logger: AnalyzeLogger,
   force: boolean,
-  authStorage: AuthStorage,
+  modelRegistry: ModelRegistry,
 ): Promise<AnalyzeResult> {
   const obsPath = getObservationsPath(project.id, baseDir);
   const sessionCount = countDistinctSessions(obsPath);
@@ -666,9 +670,9 @@ async function consolidateProject(
     projectId: project.id,
   });
 
-  const { apiKey, model, modelId } = await resolveAnalyzerModel(
+  const { apiKey, model, modelId, headers } = await resolveAnalyzerModel(
     config,
-    authStorage,
+    modelRegistry,
   );
 
   const context = {
@@ -701,6 +705,7 @@ async function consolidateProject(
       model,
       apiKey,
       abortController.signal,
+      headers,
     );
     singleShotMessage = result.message;
 
@@ -867,6 +872,7 @@ async function main(): Promise<void> {
     let errored = 0;
     const allProjectStats: ProjectRunStats[] = [];
     const authStorage = AuthStorage.create();
+    const modelRegistry = ModelRegistry.create(authStorage);
 
     if (isConsolidateOnly) {
       // --consolidate: manual trigger, consolidation only, skip gates
@@ -878,7 +884,7 @@ async function main(): Promise<void> {
             baseDir,
             logger,
             true,
-            authStorage,
+            modelRegistry,
           );
           if (result.ran && result.stats) {
             processed++;
@@ -902,7 +908,7 @@ async function main(): Promise<void> {
       // Normal mode: analyze observations, then opportunistic consolidation
       for (const project of projects) {
         try {
-          const result = await analyzeProject(project, config, baseDir, logger, authStorage);
+          const result = await analyzeProject(project, config, baseDir, logger, modelRegistry);
           if (result.ran && result.stats) {
             processed++;
             allProjectStats.push(result.stats);
@@ -932,7 +938,7 @@ async function main(): Promise<void> {
               baseDir,
               logger,
               false,
-              authStorage,
+              modelRegistry,
             );
             if (result.ran && result.stats) {
               processed++;

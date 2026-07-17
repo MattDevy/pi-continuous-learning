@@ -401,7 +401,7 @@ All defaults work out of the box. Override at `~/.pi/continuous-learning/config.
 | `max_instincts` | 20 | Maximum instincts injected per turn |
 | `max_injection_chars` | 4000 | Character budget for the injection block (~1,000 tokens) |
 | `model` | `claude-haiku-4-5` | Model for the background analyzer |
-| `provider` | `anthropic` | Pi provider for the background analyzer model |
+| `provider` | `anthropic` | Pi provider for the background analyzer model, including custom providers from `~/.pi/agent/models.json` |
 | `timeout_seconds` | 120 | Per-project LLM session timeout |
 | `active_hours_start` | 8 | Hour (0–23) at which the active observation window starts |
 | `active_hours_end` | 23 | Hour (0–23) at which the active observation window ends |
