@@ -36,14 +36,14 @@ pi install npm:pi-simplify
 
 ## What it does
 
-When invoked, `/simplify` detects changed files (via `git diff`) and instructs the agent to review them with these principles:
+When invoked, `/simplify` detects changed files and line ranges (via `git diff`) and instructs the agent to review only those changed lines with these principles:
 
 - **Preserve functionality**: never change what the code does
 - **Apply project standards**: follow conventions from CLAUDE.md / AGENTS.md
 - **Enhance clarity**: reduce complexity, eliminate redundancy, improve naming
 - **Maintain balance**: avoid over-simplification
 
-The agent reads each file, applies improvements one at a time, runs tests to verify nothing breaks, and summarizes the changes.
+The agent may read surrounding code for context, but edits stay within the changed line ranges. Newly added files are reviewed in full. It applies improvements one file at a time, runs tests to verify nothing breaks, and summarises the changes.
 
 ## License
 

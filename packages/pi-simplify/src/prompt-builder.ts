@@ -1,7 +1,22 @@
 import type { ChangedFile } from "./types.js";
 
+function formatFile(file: ChangedFile): string {
+  if (file.status === "added") return `- ${file.path} (added; entire file is in scope)`;
+  if (file.changedLines === undefined) {
+    return `- ${file.path} (${file.status}; changed lines unavailable — inspect git diff before editing)`;
+  }
+  if (file.changedLines.length === 0) {
+    return `- ${file.path} (${file.status}; deletions only — no current lines to simplify)`;
+  }
+
+  const ranges = file.changedLines.map(({ start, end }) => (
+    start === end ? `${start}` : `${start}-${end}`
+  ));
+  return `- ${file.path} (${file.status}; changed lines: ${ranges.join(", ")})`;
+}
+
 export function buildSimplifyPrompt(files: readonly ChangedFile[]): string {
-  const fileList = files.map((f) => `- ${f.path} (${f.status})`).join("\n");
+  const fileList = files.map(formatFile).join("\n");
 
   return `Review the following recently changed files and apply simplification improvements.
 
@@ -14,16 +29,20 @@ export function buildSimplifyPrompt(files: readonly ChangedFile[]): string {
 
 ## Scope
 
-Only review and modify these files:
+Only review and modify the changed lines listed below. Changed line numbers refer to
+the current file contents. You may read surrounding code for context, but must not
+edit it. For added files, the entire file is considered changed.
 ${fileList}
 
 ## Process
 
-1. Read each file listed above
-2. Identify concrete improvements (dead code, unclear names, redundant logic, inconsistent patterns)
-3. Apply changes one file at a time
+1. Read each file listed above and inspect its changed lines
+2. Identify concrete improvements within those lines (dead code, unclear names, redundant logic, inconsistent patterns)
+3. Apply changes one file at a time, keeping every edit within the listed line ranges
 4. After all changes, run existing tests to verify nothing is broken
 5. Summarize what you changed and why
 
-Do NOT add new features, change public APIs, or refactor code outside the listed files.`;
+Do NOT add new features, change public APIs, or refactor code outside the listed
+line ranges. If a worthwhile simplification would require editing unchanged code,
+leave it alone and mention it in the summary instead.`;
 }
