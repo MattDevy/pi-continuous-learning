@@ -9,6 +9,9 @@ function makePi(execResults: Record<string, { stdout: string; stderr: string; co
       for (const [pattern, result] of Object.entries(execResults)) {
         if (key.includes(pattern)) return Promise.resolve(result);
       }
+      if (args.includes("--unified=0")) {
+        return Promise.resolve({ stdout: "", stderr: "", code: 0 });
+      }
       return Promise.resolve({ stdout: "", stderr: "", code: 1 });
     }),
   } as unknown as Parameters<typeof getChangedFiles>[0];
@@ -29,10 +32,10 @@ describe("getChangedFiles", () => {
     const files = await getChangedFiles(pi, "/project", defaultOptions);
 
     expect(files).toEqual([
-      { path: "src/foo.ts", status: "modified" },
+      { path: "src/foo.ts", status: "modified", changedLines: [] },
       { path: "src/bar.ts", status: "added" },
-      { path: "src/new.ts", status: "renamed" },
-      { path: "src/b.ts", status: "copied" },
+      { path: "src/new.ts", status: "renamed", changedLines: [] },
+      { path: "src/b.ts", status: "copied", changedLines: [] },
     ]);
   });
 
@@ -47,7 +50,7 @@ describe("getChangedFiles", () => {
 
     const files = await getChangedFiles(pi, "/project", defaultOptions);
 
-    expect(files).toEqual([{ path: "src/keep.ts", status: "modified" }]);
+    expect(files).toEqual([{ path: "src/keep.ts", status: "modified", changedLines: [] }]);
   });
 
   it("falls back to HEAD~1 when HEAD diff is empty", async () => {
@@ -61,7 +64,7 @@ describe("getChangedFiles", () => {
 
     const files = await getChangedFiles(pi, "/project", defaultOptions);
 
-    expect(files).toEqual([{ path: "src/recent.ts", status: "modified" }]);
+    expect(files).toEqual([{ path: "src/recent.ts", status: "modified", changedLines: [] }]);
   });
 
   it("returns empty array when both HEAD and HEAD~1 diffs are empty", async () => {
@@ -84,10 +87,15 @@ describe("getChangedFiles", () => {
     const options: SimplifyOptions = { files: [], ref: "HEAD", staged: true };
     const files = await getChangedFiles(pi, "/project", options);
 
-    expect(files).toEqual([{ path: "src/staged.ts", status: "modified" }]);
+    expect(files).toEqual([{ path: "src/staged.ts", status: "modified", changedLines: [] }]);
     expect(pi.exec).toHaveBeenCalledWith(
       "git",
       ["diff", "--name-status", "--cached"],
+      { cwd: "/project" },
+    );
+    expect(pi.exec).toHaveBeenCalledWith(
+      "git",
+      ["diff", "--unified=0", "--no-ext-diff", "--cached", "--", "src/staged.ts"],
       { cwd: "/project" },
     );
   });
@@ -107,7 +115,7 @@ describe("getChangedFiles", () => {
     expect(files).toEqual([{ path: "src/feature.ts", status: "added" }]);
   });
 
-  it("returns explicit file list directly without running git", async () => {
+  it("gets diffs for every file in an explicit file list", async () => {
     const pi = makePi({});
 
     const options: SimplifyOptions = {
@@ -118,10 +126,10 @@ describe("getChangedFiles", () => {
     const files = await getChangedFiles(pi, "/project", options);
 
     expect(files).toEqual([
-      { path: "src/a.ts", status: "modified" },
-      { path: "src/b.ts", status: "modified" },
+      { path: "src/a.ts", status: "modified", changedLines: [] },
+      { path: "src/b.ts", status: "modified", changedLines: [] },
     ]);
-    expect(pi.exec).not.toHaveBeenCalled();
+    expect(pi.exec).toHaveBeenCalledTimes(2);
   });
 
   it("handles blank lines in git output", async () => {
@@ -136,8 +144,58 @@ describe("getChangedFiles", () => {
     const files = await getChangedFiles(pi, "/project", defaultOptions);
 
     expect(files).toEqual([
-      { path: "src/foo.ts", status: "modified" },
+      { path: "src/foo.ts", status: "modified", changedLines: [] },
       { path: "src/bar.ts", status: "added" },
     ]);
+  });
+
+  it("extracts changed line ranges and ignores deletion-only hunks", async () => {
+    const pi = makePi({
+      "diff --name-status HEAD": {
+        stdout: "M\tsrc/Foo.java\n",
+        stderr: "",
+        code: 0,
+      },
+      "diff --unified=0 --no-ext-diff HEAD -- src/Foo.java": {
+        stdout: [
+          "@@ -99,2 +100,3 @@",
+          "@@ -104 +105,2 @@",
+          "@@ -200 +202,0 @@",
+        ].join("\n"),
+        stderr: "",
+        code: 0,
+      },
+    });
+
+    const files = await getChangedFiles(pi, "/project", defaultOptions);
+
+    expect(files).toEqual([{
+      path: "src/Foo.java",
+      status: "modified",
+      changedLines: [{ start: 100, end: 102 }, { start: 105, end: 106 }],
+    }]);
+  });
+
+  it("gets changed lines for explicitly supplied files", async () => {
+    const pi = makePi({
+      "diff --unified=0 --no-ext-diff HEAD -- src/Foo.java": {
+        stdout: "@@ -99,21 +100,21 @@\n",
+        stderr: "",
+        code: 0,
+      },
+    });
+    const options: SimplifyOptions = {
+      files: ["src/Foo.java"],
+      ref: "HEAD",
+      staged: false,
+    };
+
+    const files = await getChangedFiles(pi, "/project", options);
+
+    expect(files).toEqual([{
+      path: "src/Foo.java",
+      status: "modified",
+      changedLines: [{ start: 100, end: 120 }],
+    }]);
   });
 });
