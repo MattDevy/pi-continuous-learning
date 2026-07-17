@@ -261,9 +261,11 @@ export async function runSingleShot(
   model: Parameters<typeof complete>[0],
   apiKey: string,
   signal?: AbortSignal,
+  headers?: Record<string, string>,
 ): Promise<SingleShotResult> {
   const opts: Parameters<typeof complete>[2] = { apiKey };
   if (signal !== undefined) opts.signal = signal;
+  if (headers !== undefined) opts.headers = headers;
   const message = await complete(model, context, opts);
 
   const textContent = message.content

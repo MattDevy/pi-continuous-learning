@@ -1,47 +1,48 @@
-import type { AuthStorage } from "@earendil-works/pi-coding-agent";
-import {
-  getModel,
-  getProviders,
-  type Api,
-  type KnownProvider,
-  type Model,
-} from "@earendil-works/pi-ai";
+import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type { Config } from "../types.js";
 
-type AnalyzerAuthStorage = Pick<AuthStorage, "getApiKey">;
+type AnalyzerModelRegistry = Pick<
+  ModelRegistry,
+  "find" | "getAll" | "getApiKeyAndHeaders"
+>;
 
 export interface AnalyzerModelResolution {
   readonly apiKey: string;
   readonly model: Model<Api>;
   readonly modelId: string;
   readonly providerId: string;
-}
-
-function isKnownProvider(value: string): value is KnownProvider {
-  return (getProviders() as string[]).includes(value);
+  readonly headers?: Record<string, string>;
 }
 
 export async function resolveAnalyzerModel(
   config: Config,
-  authStorage: AnalyzerAuthStorage,
+  modelRegistry: AnalyzerModelRegistry,
 ): Promise<AnalyzerModelResolution> {
   const providerId = config.provider;
   const modelId = config.model;
 
-  if (!isKnownProvider(providerId)) {
+  const providerModels = modelRegistry
+    .getAll()
+    .filter((candidate) => candidate.provider === providerId);
+  if (providerModels.length === 0) {
     throw new Error(`Unknown analyzer provider: ${providerId}`);
   }
 
-  // getModel returns undefined for unknown model IDs but its overload signature
-  // only accepts known model IDs — cast the result to include undefined so the
-  // runtime guard below is reachable for arbitrary config values.
-  const model = getModel(providerId, modelId as never) as Model<Api> | undefined;
+  const model = modelRegistry.find(providerId, modelId);
 
   if (!model) {
     throw new Error(`Unknown analyzer model: ${providerId}/${modelId}`);
   }
 
-  const apiKey = await authStorage.getApiKey(providerId);
+  const auth = await modelRegistry.getApiKeyAndHeaders(model);
+  if (!auth.ok) {
+    throw new Error(
+      `Could not resolve analyzer credentials for provider ${providerId}: ${auth.error}`,
+    );
+  }
+
+  const apiKey = auth.apiKey;
   if (!apiKey) {
     throw new Error(
       `No API key configured for provider: ${providerId}. ` +
@@ -49,5 +50,11 @@ export async function resolveAnalyzerModel(
     );
   }
 
-  return { apiKey, model, modelId, providerId };
+  return {
+    apiKey,
+    model,
+    modelId,
+    providerId,
+    ...(auth.headers ? { headers: auth.headers } : {}),
+  };
 }
