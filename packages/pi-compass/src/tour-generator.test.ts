@@ -2,7 +2,13 @@ import { describe, it, expect, afterAll } from "vitest";
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { detectAvailableTopics, generateTour, formatTourMarkdown } from "./tour-generator.js";
+import {
+  detectAvailableTopics,
+  generateTour,
+  formatTourMarkdown,
+  getOrGenerateTour,
+} from "./tour-generator.js";
+import { ensureStorageLayout, loadCachedTour } from "./storage.js";
 import type { CodeMap } from "./types.js";
 
 const tmpBase = mkdtempSync(join(tmpdir(), "compass-tour-test-"));
@@ -75,6 +81,21 @@ describe("generateTour", () => {
 
     const tour = generateTour(dir, "testing", makeCodemap());
     expect(tour.steps.length).toBeGreaterThan(0);
+  });
+});
+
+describe("getOrGenerateTour", () => {
+  it("regenerates a cached tour when the codemap changes", () => {
+    const dir = join(tmpBase, "tour-cache");
+    const cacheDir = join(tmpBase, "tour-cache-storage");
+    mkdirSync(join(dir, "src"), { recursive: true });
+    writeFileSync(join(dir, "src", "index.ts"), "export {}");
+    ensureStorageLayout("abc", cacheDir);
+
+    getOrGenerateTour(dir, "src", makeCodemap({ contentHash: "first" }), "abc", cacheDir);
+    getOrGenerateTour(dir, "src", makeCodemap({ contentHash: "second" }), "abc", cacheDir);
+
+    expect(loadCachedTour("abc", "src", cacheDir)?.contentHash).toBe("second");
   });
 });
 

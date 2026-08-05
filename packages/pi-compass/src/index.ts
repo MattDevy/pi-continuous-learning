@@ -5,7 +5,7 @@ import type {
 
 import { detectProject } from "./project.js";
 import { ensureStorageLayout, loadCachedCodemap } from "./storage.js";
-import { computeContentHash } from "./codemap-generator.js";
+import { getOrGenerateCodemap } from "./codemap-generator.js";
 import {
   handleBeforeAgentStart as buildInjection,
   type BeforeAgentStartEvent,
@@ -37,13 +37,18 @@ export default function (pi: ExtensionAPI): void {
       ensureStorageLayout(project.id);
 
       const cached = loadCachedCodemap(project.id);
-      let stale = false;
-      if (cached) {
-        const currentHash = computeContentHash(project.root);
-        stale = cached.contentHash !== currentHash;
-      }
+      const codemap = cached
+        ? getOrGenerateCodemap(project.root, project.id, project.name).codemap
+        : null;
+      const cachedCodemap = codemap
+        ? {
+            data: codemap,
+            contentHash: codemap.contentHash,
+            createdAt: codemap.generatedAt,
+          }
+        : null;
 
-      state = { ...state, project, cachedCodemap: cached, stale };
+      state = { ...state, project, cachedCodemap, stale: false };
 
       registerOnboardTools(pi, stateRef);
     } catch (err) {

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { basename } from "node:path";
+import { basename, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ProjectInfo } from "./types.js";
 
@@ -11,19 +11,20 @@ export async function detectProject(
   pi: ExtensionAPI,
   cwd: string,
 ): Promise<ProjectInfo> {
-  const name = basename(cwd);
-
-  const remoteResult = await pi.exec("git", ["remote", "get-url", "origin"], { cwd });
-  if (remoteResult.code === 0) {
-    const remote = remoteResult.stdout.trim();
-    return { id: hashString(remote), name, root: cwd, remote };
-  }
-
-  const rootResult = await pi.exec("git", ["rev-parse", "--show-toplevel"], { cwd });
+  const absoluteCwd = resolve(cwd);
+  const rootResult = await pi.exec("git", ["rev-parse", "--show-toplevel"], { cwd: absoluteCwd });
   if (rootResult.code === 0) {
     const root = rootResult.stdout.trim();
-    return { id: hashString(root), name, root, remote: "" };
+    const name = basename(root);
+    const remoteResult = await pi.exec("git", ["remote", "get-url", "origin"], { cwd: root });
+    const remote = remoteResult.code === 0 ? remoteResult.stdout.trim() : "";
+    return { id: hashString(remote || root), name, root, remote };
   }
 
-  return { id: "global", name, root: cwd, remote: "" };
+  return {
+    id: hashString(absoluteCwd),
+    name: basename(absoluteCwd),
+    root: absoluteCwd,
+    remote: "",
+  };
 }

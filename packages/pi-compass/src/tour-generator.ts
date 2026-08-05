@@ -224,7 +224,7 @@ export function getOrGenerateTour(
   baseDir?: string,
 ): CodeTour {
   const cached = loadCachedTour(projectId, topic, baseDir);
-  if (cached) return cached.data;
+  if (cached && cached.contentHash === codemap.contentHash) return cached.data;
 
   const tour = generateTour(cwd, topic, codemap);
   const entry: CacheEntry<CodeTour> = {

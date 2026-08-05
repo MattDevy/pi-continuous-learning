@@ -37,6 +37,15 @@ function createCodemapTool(stateRef: StateRef) {
         state.project.id,
         state.project.name,
       );
+      stateRef.set({
+        ...state,
+        cachedCodemap: {
+          data: codemap,
+          contentHash: codemap.contentHash,
+          createdAt: codemap.generatedAt,
+        },
+        stale: false,
+      });
 
       const markdown = formatCodemapMarkdown(codemap);
       return {
@@ -66,8 +75,20 @@ function createTourTool(stateRef: StateRef) {
         throw new Error("No project detected.");
       }
 
-      const codemap = state.cachedCodemap?.data
-        ?? getOrGenerateCodemap(state.project.root, state.project.id, state.project.name).codemap;
+      const { codemap } = getOrGenerateCodemap(
+        state.project.root,
+        state.project.id,
+        state.project.name,
+      );
+      stateRef.set({
+        ...state,
+        cachedCodemap: {
+          data: codemap,
+          contentHash: codemap.contentHash,
+          createdAt: codemap.generatedAt,
+        },
+        stale: false,
+      });
 
       if (!params.topic) {
         const topics = detectAvailableTopics(state.project.root, codemap);
