@@ -91,12 +91,8 @@ export function getOrGenerateCodemap(
   baseDir?: string,
 ): CodemapResult {
   const cached = loadCachedCodemap(projectId, baseDir);
-  if (cached) {
-    const currentHash = computeContentHash(cwd);
-    if (cached.contentHash === currentHash) {
-      return { codemap: cached.data, fromCache: true, stale: false };
-    }
-    return { codemap: cached.data, fromCache: true, stale: true };
+  if (cached && cached.contentHash === computeContentHash(cwd)) {
+    return { codemap: cached.data, fromCache: true, stale: false };
   }
 
   const codemap = generateCodemap(cwd, projectId, projectName);

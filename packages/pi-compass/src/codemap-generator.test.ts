@@ -86,15 +86,20 @@ describe("getOrGenerateCodemap", () => {
     expect(result.stale).toBe(false);
   });
 
-  it("detects stale cache when content changes", () => {
+  it("regenerates stale cache when content changes", () => {
     const cacheDir = join(tmpBase, "cache-stale");
     ensureStorageLayout("gen-stale", cacheDir);
     const dir = setupProject("get-stale", { "package.json": '{"name":"z"}' });
-    getOrGenerateCodemap(dir, "gen-stale", "z", cacheDir);
+    const initial = getOrGenerateCodemap(dir, "gen-stale", "z", cacheDir);
 
     writeFileSync(join(dir, "package.json"), '{"name":"z","version":"2.0.0"}');
-    const result = getOrGenerateCodemap(dir, "gen-stale", "z", cacheDir);
-    expect(result.fromCache).toBe(true);
-    expect(result.stale).toBe(true);
+    const refreshed = getOrGenerateCodemap(dir, "gen-stale", "z", cacheDir);
+    expect(refreshed.fromCache).toBe(false);
+    expect(refreshed.stale).toBe(false);
+    expect(refreshed.codemap.contentHash).not.toBe(initial.codemap.contentHash);
+
+    const cached = getOrGenerateCodemap(dir, "gen-stale", "z", cacheDir);
+    expect(cached.fromCache).toBe(true);
+    expect(cached.codemap.contentHash).toBe(refreshed.codemap.contentHash);
   });
 });
