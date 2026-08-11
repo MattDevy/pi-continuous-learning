@@ -13,8 +13,9 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "eslint packages/",
+    "lint": "eslint packages/ scripts/",
     "check": "npm run check --workspaces --if-present",
+    "check:packages": "node --test scripts/check-packed-packages.test.mjs && node scripts/check-packed-packages.mjs",
     "lint:mega": "npx mega-linter-runner --flavor javascript --release v9",
     "lint:mega:fix": "npx mega-linter-runner --flavor javascript --release v9 --fix"
   },

@@ -35,6 +35,14 @@ export default [
     },
   },
   {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     ignores: ["packages/*/dist/**", "node_modules/**", "**/*.config.ts", "**/*.config.js"],
   },
 ];

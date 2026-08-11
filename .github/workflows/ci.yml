@@ -35,6 +35,12 @@ jobs:
       - name: Run tests
         run: npm test --workspaces --if-present
 
+      - name: Build packages
+        run: npm run build
+
+      - name: Check packed packages
+        run: npm run check:packages
+
   pr-title:
     name: PR Title
     runs-on: ubuntu-latest
