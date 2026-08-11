@@ -1,0 +1,32 @@
+---
+name: Approve Release Please PR
+
+on: # yamllint disable-line rule:truthy
+  pull_request_target:
+    types:
+      - ready_for_review
+
+permissions:
+  pull-requests: write
+
+jobs:
+  approve:
+    name: Approve
+    if: >-
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release-please--branches--main') &&
+      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Approve release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: >-
+          gh api
+          --method POST
+          "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews"
+          --field event=APPROVE
+          --field body='Automatically approved when the Release Please PR was marked ready for review.'
