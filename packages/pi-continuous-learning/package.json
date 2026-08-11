@@ -60,6 +60,9 @@
     "prepublishOnly": "npm run build && npm run check",
     "prepack": "test -d dist || { echo 'Error: dist/ missing. Run npm run build first.' && exit 1; }"
   },
+  "dependencies": {
+    "yaml": "^2.9.0"
+  },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "^0.74.0",
     "@earendil-works/pi-ai": "^0.74.0",
