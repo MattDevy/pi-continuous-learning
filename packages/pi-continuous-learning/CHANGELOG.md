@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.4](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.3...pi-continuous-learning-v0.14.4) (2026-08-11)
+
+
+### Bug Fixes
+
+* **continuous-learning:** Declare yaml runtime dependency ([#165](https://github.com/MattDevy/pi-extensions/issues/165)) ([b111b1f](https://github.com/MattDevy/pi-extensions/commit/b111b1f14082f9e81f252eb0748d2b560293a548))
+
 ## [0.14.3](https://github.com/MattDevy/pi-extensions/compare/pi-continuous-learning-v0.14.2...pi-continuous-learning-v0.14.3) (2026-07-17)
 
 
