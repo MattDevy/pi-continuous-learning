@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/MattDevy/pi-extensions/compare/pi-compass-v0.2.1...pi-compass-v0.2.2) (2026-08-11)
+
+
+### Bug Fixes
+
+* **pi-compass:** Keep codemaps scoped and fresh ([#162](https://github.com/MattDevy/pi-extensions/issues/162)) ([0eb5ba1](https://github.com/MattDevy/pi-extensions/commit/0eb5ba13d18f34a1fec3a7787c076064fe4b002a))
+
 ## [0.2.1](https://github.com/MattDevy/pi-extensions/compare/pi-compass-v0.2.0...pi-compass-v0.2.1) (2026-05-14)
 
 
