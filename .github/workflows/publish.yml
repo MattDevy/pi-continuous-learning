@@ -62,6 +62,11 @@ jobs:
             exit 1
           fi
 
+      - name: Check packed package
+        run: >-
+          node scripts/check-packed-packages.mjs
+          "${{ steps.pkg.outputs.path }}"
+          --pack-destination=.packed
+
       - name: Publish
-        working-directory: ${{ steps.pkg.outputs.path }}
-        run: npm publish --provenance --access public --ignore-scripts
+        run: npm publish .packed/*.tgz --provenance --access public --ignore-scripts
